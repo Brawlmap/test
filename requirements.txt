@@ -1,5 +1,6 @@
-requests
-python-dotenv
 flask
-Flask-Cors
+flask-cors
+python-dotenv
+requests
 rich
+gunicorn

@@ -2,32 +2,56 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import requests, os, json, uuid, time, hmac, hashlib, secrets
+from collections import defaultdict
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# ── CORS: lock to your domain in production ──────────────────────────────────
+# Change ALLOWED_ORIGIN in .env to your real domain, e.g. https://brawlmap.gg
+ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
+CORS(app, origins=ALLOWED_ORIGIN)
 
 BASE_URL = "https://api.brawlstars.com/v1"
 API_KEY  = os.getenv("BRAWL_STARS_API_KEY")
 
-# ── CMS config ──────────────────────────────────────────────────────────────
-ADMIN_PASSWORD = os.getenv("CMS_PASSWORD", "brawlmap2025")   # set in .env!
-NEWS_FILE      = os.path.join(os.path.dirname(__file__), "news_posts.json")
-UPLOAD_DIR     = os.path.join(os.path.dirname(__file__), "static", "uploads")
+# ── CMS config ───────────────────────────────────────────────────────────────
+# NEVER hardcode the password here. Set CMS_PASSWORD in your .env or hosting env vars.
+ADMIN_PASSWORD = os.getenv("CMS_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("CMS_PASSWORD environment variable is not set. Server will not start without it.")
+
+NEWS_FILE  = os.path.join(os.path.dirname(__file__), "news_posts.json")
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-ALLOWED_EXTS   = {"png", "jpg", "jpeg", "webp", "gif", "avif"}
+ALLOWED_EXTS    = {"png", "jpg", "jpeg", "webp", "gif", "avif"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024   # 5 MB
 
-# Simple in-memory session store  {token: expires_unix}
+# ── Session store  {token: expires_unix} ─────────────────────────────────────
 _sessions: dict[str, float] = {}
 SESSION_TTL = 60 * 60 * 6   # 6 hours
+
+# ── Login rate limiting: max 10 attempts per IP per 15 min ───────────────────
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+LOGIN_MAX      = 10
+LOGIN_WINDOW   = 15 * 60   # seconds
+
+def _check_rate_limit(ip: str) -> bool:
+    """Returns True if allowed, False if rate-limited."""
+    now = time.time()
+    attempts = [t for t in _login_attempts[ip] if now - t < LOGIN_WINDOW]
+    _login_attempts[ip] = attempts
+    if len(attempts) >= LOGIN_MAX:
+        return False
+    _login_attempts[ip].append(now)
+    return True
 
 def bs_headers():
     return {"Authorization": f"Bearer {API_KEY}"}
 
-# ── News helpers ─────────────────────────────────────────────────────────────
+# ── News helpers ──────────────────────────────────────────────────────────────
 
 def load_posts() -> list:
     if not os.path.exists(NEWS_FILE):
@@ -63,7 +87,7 @@ def upstream_jsonify(response):
         return jsonify({"error": "Empty upstream response"}), response.status_code
     return jsonify(data), response.status_code
 
-# ── Auth helpers ─────────────────────────────────────────────────────────────
+# ── Auth helpers ──────────────────────────────────────────────────────────────
 
 def issue_token() -> str:
     token = secrets.token_hex(32)
@@ -88,12 +112,17 @@ def require_auth():
         return jsonify({"error": "Unauthorized"}), 401
     return None
 
-# ── CMS: Auth ────────────────────────────────────────────────────────────────
+# ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
 @app.route("/cms/login", methods=["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])
 def cms_login():
     if request.method != "POST":
         return jsonify({"error": "POST required", "method": request.method}), 405
+
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    if not _check_rate_limit(ip):
+        return jsonify({"error": "Too many login attempts. Try again in 15 minutes."}), 429
+
     data = request.get_json(silent=True)
     if data is None:
         data = request.form.to_dict() or {}
@@ -101,9 +130,11 @@ def cms_login():
     pw = data.get("password", "")
     if not pw:
         return jsonify({"error": "Missing password"}), 400
+
     # Constant-time compare to prevent timing attacks
-    if not hmac.compare_digest(pw, ADMIN_PASSWORD):
+    if not hmac.compare_digest(pw.encode(), ADMIN_PASSWORD.encode()):
         return jsonify({"error": "Wrong password"}), 401
+
     token = issue_token()
     return jsonify({"token": token})
 
@@ -113,7 +144,7 @@ def cms_logout():
     _sessions.pop(token, None)
     return jsonify({"ok": True})
 
-# ── CMS: Posts ───────────────────────────────────────────────────────────────
+# ── CMS: Posts ────────────────────────────────────────────────────────────────
 
 @app.route("/cms/posts", methods=["GET"])
 def cms_list_posts():
@@ -133,7 +164,7 @@ def cms_create_post():
     body     = (data.get("body")     or "").strip()
     category = (data.get("category") or "news").strip()
     author   = (data.get("author")   or "Admin").strip()
-    image    = (data.get("image")    or "").strip()   # server-relative path
+    image    = (data.get("image")    or "").strip()
 
     if not title or not excerpt or not body:
         return jsonify({"error": "title, excerpt and body are required"}), 400
@@ -163,7 +194,6 @@ def cms_delete_post(post_id):
     if len(new_posts) == len(posts):
         return jsonify({"error": "Post not found"}), 404
 
-    # Delete orphaned image if it lives in our upload folder
     deleted = next(p for p in posts if p["id"] == post_id)
     img = deleted.get("image", "")
     if img.startswith("/static/uploads/"):
@@ -175,7 +205,7 @@ def cms_delete_post(post_id):
     save_posts(new_posts)
     return jsonify({"ok": True})
 
-# ── CMS: Image upload ────────────────────────────────────────────────────────
+# ── CMS: Image upload ─────────────────────────────────────────────────────────
 
 @app.route("/cms/upload", methods=["POST"])
 def cms_upload_image():
@@ -191,7 +221,6 @@ def cms_upload_image():
     if not allowed_file(file.filename):
         return jsonify({"error": f"Allowed types: {', '.join(ALLOWED_EXTS)}"}), 400
 
-    # Read into memory to check size before saving
     data = file.read()
     if len(data) > MAX_IMAGE_BYTES:
         return jsonify({"error": "Image exceeds 5 MB limit"}), 413
@@ -204,13 +233,13 @@ def cms_upload_image():
     url = f"/static/uploads/{fname}"
     return jsonify({"url": url}), 201
 
-# ── Serve uploaded images ────────────────────────────────────────────────────
+# ── Serve uploaded images ─────────────────────────────────────────────────────
 
 @app.route("/static/uploads/<filename>")
 def serve_upload(filename):
     return send_from_directory(UPLOAD_DIR, filename)
 
-# ── Player ───────────────────────────────────────────────────────────────────
+# ── Player ────────────────────────────────────────────────────────────────────
 
 @app.route("/player/<path:tag>")
 def get_player(tag):
@@ -266,11 +295,11 @@ def get_player_brawlers(tag):
                 for key, val in b.items():
                     if "hyper" in key.lower() and val: has_hypercharge = True; break
 
-            if power < 7:       colour = "grey"
-            elif power < 9:     colour = "green"
-            elif power < 11:    colour = "yellow"
+            if power < 7:         colour = "grey"
+            elif power < 9:       colour = "green"
+            elif power < 11:      colour = "yellow"
             elif has_hypercharge: colour = "purple"
-            else:               colour = "red"
+            else:                 colour = "red"
 
             result.append({
                 "id": b.get("id"), "name": b.get("name"), "power": power,
@@ -339,4 +368,4 @@ def debug_player_brawlers(tag):
 
 if __name__ == "__main__":
     print("Brawlmap server running at http://localhost:5000")
-    app.run(port=5000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
