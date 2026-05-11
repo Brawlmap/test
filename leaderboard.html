@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrawlMap — Leaderboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<div class="inner-page leaderboard-page">
+  <h2>LEADERBOARD</h2>
+  <p class="sub">Top players, clubs &amp; brawlers worldwide</p>
+  <div class="rankings-controls">
+    <div class="input-group">
+      <label>Type</label>
+      <select id="rank-type" onchange="onRankTypeChange()">
+        <option value="players">Players</option>
+        <option value="clubs">Clubs</option>
+        <option value="brawlers">Brawlers</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Region</label>
+      <select id="rank-country">
+        <option value="global">Global</option>
+        <option value="us">United States</option>
+        <option value="gb">United Kingdom</option>
+        <option value="de">Germany</option>
+        <option value="fr">France</option>
+        <option value="kr">South Korea</option>
+        <option value="jp">Japan</option>
+        <option value="br">Brazil</option>
+        <option value="tr">Turkey</option>
+        <option value="ua">Ukraine</option>
+        <option value="ru">Russia</option>
+        <option value="cn">China</option>
+        <option value="mx">Mexico</option>
+        <option value="es">Spain</option>
+        <option value="th">Thailand</option>
+      </select>
+    </div>
+    <button class="btn" onclick="loadRankings()">Load</button>
+    <div class="brawler-select-wrap input-group" id="brawler-select-wrap">
+      <label>Brawler</label>
+      <select id="rank-brawler"><option value="">Loading...</option></select>
+    </div>
+  </div>
+  <div class="error" id="rank-error"></div>
+  <div class="loading" id="rank-loading"><span class="spinner"></span>Loading rankings...</div>
+  <div class="rankings-table" id="rank-table" style="display:none"></div>
+</div>
+
+<script>
+const API = 'http://localhost:5000';
+let brawlerList = [];
+
+async function safeFetchJson(res) {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Invalid JSON from ${res.url} (${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
+window.onload = fetchBrawlerList;
+
+/* ── Rankings ── */
+async function fetchBrawlerList() {
+  try {
+    const r = await fetch(`${API}/brawlers`);
+    const data = await safeFetchJson(r);
+    brawlerList = (data?.items || []).sort((a,b)=>a.name.localeCompare(b.name));
+    document.getElementById('rank-brawler').innerHTML = brawlerList.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  } catch(e){}
+}
+function onRankTypeChange() {
+  document.getElementById('brawler-select-wrap').style.display=document.getElementById('rank-type').value==='brawlers'?'flex':'none';
+}
+async function loadRankings() {
+  const type=document.getElementById('rank-type').value, country=document.getElementById('rank-country').value;
+  showErr('rank-error',null);
+  document.getElementById('rank-table').style.display='none';
+  document.getElementById('rank-loading').style.display='block';
+  try {
+    let url;
+    if(type==='brawlers'){const bid=document.getElementById('rank-brawler').value;if(!bid){showErr('rank-error','Select a brawler.');return;}url=`${API}/rankings/${country}/brawlers/${bid}?limit=200`;}
+    else url=`${API}/rankings/${country}/${type}?limit=200`;
+    const r = await fetch(url);
+    const data = await safeFetchJson(r);
+    if(!r.ok) throw new Error((data && (data.reason || data.message)) || `HTTP ${r.status}`);
+    const isClub=type==='clubs';
+    let html=`<table><thead><tr><th>#</th><th>${isClub?'Club':'Player'}</th><th>Trophies</th>${!isClub?'<th>Club</th>':'<th>Members</th>'}</tr></thead><tbody>`;
+    (data.items||[]).forEach((item,i)=>{
+      const rank=item.rank||(i+1),rc=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'',extra=isClub?(item.memberCount??'—'):(item.club?.name||'—');
+      html+=`<tr><td><span class="rank-num ${rc}">${rank}</span></td><td>${item.name||'—'}</td><td><span class="trophy-val">${(item.trophies||0).toLocaleString()}</span></td><td style="color:var(--text2);font-size:12px">${extra}</td></tr>`;
+    });
+    html+='</tbody></table>';
+    const el=document.getElementById('rank-table'); el.innerHTML=html; el.style.display='block';
+  } catch(e){showErr('rank-error',e.message);}
+  finally{document.getElementById('rank-loading').style.display='none';}
+}
+
+function showErr(id,msg){const el=document.getElementById(id);if(!msg){el.style.display='none';return;}el.textContent=msg;el.style.display='block';}
+</script>
+</body>
+</html>

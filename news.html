@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrawlMap — News</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+  <style>
+    /* ── Page layout ── */
+    .news-wrap {
+      max-width: 93%;
+      margin: 0 auto;
+      padding: 2.5rem 0.1rem 4rem;
+    }
+
+    .news-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .news-header h1 {
+      font-family: 'Lilita One', cursive;
+      font-size: 2rem;
+      color: var(--text);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Category filter pills ── */
+    .category-filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 1.75rem;
+    }
+
+    .cat-pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      font-family: 'Nunito', sans-serif;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .cat-pill:hover { border-color: var(--purple2); color: var(--purple3); }
+    .cat-pill.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+
+    /* ── News grid ── */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .news-grid { grid-template-columns: 1fr; }
+    }
+
+    .news-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      color: inherit;
+    }
+    .news-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+    .news-card-banner {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      background: var(--bg3);
+    }
+    .news-card-banner-placeholder {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .news-card-body { padding: 1.1rem 1.25rem 1.25rem; }
+
+    .news-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0.5rem;
+      font-size: 12px;
+      color: var(--text3);
+      font-weight: 600;
+    }
+
+    .news-card-category {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .cat-news       { background: #1e3a5f; color: #60a5fa; }
+    .cat-maintenance{ background: #3b2200; color: #fb923c; }
+    .cat-cosmetics  { background: #2d1b4e; color: #c084fc; }
+    .cat-brawlpass  { background: #1a3320; color: #4ade80; }
+    .cat-brawltalk  { background: #3a1a1a; color: #fbbf24; }
+    .cat-countdown  { background: #1a2b3a; color: #38bdf8; }
+
+    .news-card-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+    .news-card-excerpt {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.55;
+    }
+
+    /* ── Empty state ── */
+    .news-empty {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text3);
+      grid-column: 1/-1;
+    }
+    .news-empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .news-empty h3 { font-size: 1.1rem; color: var(--text2); margin-bottom: 0.4rem; }
+
+    /* ── Admin toggle button ── */
+    .admin-toggle {
+      padding: 7px 16px;
+      background: rgba(124,58,237,0.15);
+      border: 1.5px solid var(--purple);
+      border-radius: 8px;
+      color: var(--purple3);
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .admin-toggle:hover { background: rgba(124,58,237,0.3); }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h2 {
+      font-family: 'Lilita One', cursive;
+      font-size: 1.4rem;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text2);
+      margin-bottom: 5px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group textarea { min-height: 90px; resize: vertical; }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--purple2); }
+    .form-group select option { background: var(--bg3); }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.5rem;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      padding: 8px 18px;
+      background: transparent;
+      border: 1.5px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text2);
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-publish {
+      padding: 8px 18px;
+      background: var(--purple);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-publish:hover { background: var(--purple2); }
+
+    /* ── Auth gate ── */
+    .auth-hint { font-size: 12px; color: var(--text3); margin-top: 6px; }
+    .auth-error { color: #f87171; font-size: 13px; margin-top: 6px; }
+
+    /* ── Admin post list in modal ── */
+    .admin-post-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg3);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .admin-post-item-title { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; }
+    .btn-delete {
+      padding: 4px 10px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid #ef4444;
+      border-radius: 6px;
+      color: #f87171;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      white-space: nowrap;
+    }
+
+    /* ── Article / Single Post Page ── */
+    .post-page {
+      display: none;
+    }
+    .post-page.active {
+      display: block;
+    }
+    .post-page-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+    .post-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text2);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: 'Nunito', sans-serif;
+      padding: 0;
+      margin-bottom: 1.5rem;
+      transition: color 0.15s;
+    }
+    .post-back:hover { color: var(--text); }
+    .post-banner {
+      width: 100%;
+      max-height: 340px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+    .post-title {
+      font-family: 'Lilita One', cursive;
+      font-size: 2rem;
+      color: var(--text);
+      margin-bottom: 0.6rem;
+      line-height: 1.2;
+    }
+    .post-meta {
+      font-size: 12px;
+      color: var(--text3);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .post-body {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    /* ── Countdowns section on news page ── */
+    .countdowns-section { margin-bottom: 2.5rem; }
+    .countdowns-section .section-title { font-size: 18px; margin-bottom: 4px; }
+    .countdowns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 1rem;
+    }
+    .cd-news-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .cd-news-card .cd-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10.5px; font-weight: 800; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .cd-news-card .cd-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    .cd-news-card .cd-desc  { font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+    .cd-news-card .cd-time  { font-family: 'Lilita One', cursive; font-size: 24px; color: #fff; letter-spacing: 1px; margin-top: 4px; }
+    .cd-news-card .cd-time.ended { color: var(--text3); font-size: 16px; }
+    .cd-news-card .cd-footer { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .btn-cd-delete {
+      align-self: flex-end;
+      padding: 3px 9px;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid #ef4444;
+      border-radius: 6px;
+      color: #f87171;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    /* ── Admin tabs ── */
+    .admin-tabs {
+      display: flex; gap: 6px; margin-bottom: 1.5rem;
+    }
+    .admin-tab-btn {
+      background: transparent;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text2);
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .admin-tab-btn:hover  { border-color: var(--purple2); color: var(--text); }
+    .admin-tab-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .admin-tab-panel { display: none; }
+    .admin-tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<!-- ══ NEWS LIST PAGE ══ -->
+<div class="page active" id="view-feed">
+  <div class="news-wrap">
+
+    <div class="news-header">
+      <h1>📰 News</h1>
+      <button class="admin-toggle" onclick="openAdminGate()">✏️ Admin</button>
+    </div>
+
+    <!-- Countdowns visible to everyone -->
+    <div class="countdowns-section" id="countdowns-section" style="display:none">
+      <div class="section-title">⏳ Countdowns</div>
+      <div class="countdowns-grid" id="countdowns-grid"></div>
+    </div>
+
+    <div class="category-filters" id="cat-filters">
+      <button class="cat-pill active" data-cat="all" onclick="filterCat('all', this)">All</button>
+      <button class="cat-pill" data-cat="news" onclick="filterCat('news', this)">🗞️ News</button>
+      <button class="cat-pill" data-cat="maintenance" onclick="filterCat('maintenance', this)">🧑‍🔧 Maintenance</button>
+      <button class="cat-pill" data-cat="cosmetics" onclick="filterCat('cosmetics', this)">✨ Cosmetics</button>
+      <button class="cat-pill" data-cat="brawlpass" onclick="filterCat('brawlpass', this)">🎟️ Brawl Pass</button>
+      <button class="cat-pill" data-cat="brawltalk" onclick="filterCat('brawltalk', this)">📢 Brawl Talk</button>
+    </div>
+
+    <div class="news-grid" id="news-feed"></div>
+
+  </div>
+</div>
+
+<!-- ══ SINGLE POST PAGE ══ -->
+<div class="post-page" id="view-post">
+  <div class="post-page-wrap">
+    <button class="post-back" onclick="goBack()">← Back to News</button>
+    <div id="post-content"></div>
+  </div>
+</div>
+
+<!-- ══ AUTH GATE MODAL ══ -->
+<div class="modal-overlay" id="modal-auth">
+  <div class="modal" style="max-width:380px">
+    <h2>🔐 Admin Login</h2>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="auth-pw" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')tryLogin()" />
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-auth')">Cancel</button>
+      <button class="btn-publish" onclick="tryLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN PANEL MODAL ══ -->
+<div class="modal-overlay" id="modal-admin">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <h2 style="margin-bottom:0">⚙️ Admin Panel</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeModal('modal-admin')">Close</button>
+        <button class="btn-cancel" style="color:#f87171;border-color:#ef4444" onclick="logoutAdmin()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" onclick="switchAdminTab('posts', this)">📰 Posts</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('countdown', this)">⏳ Countdowns</button>
+    </div>
+
+    <!-- Posts tab -->
+    <div class="admin-tab-panel active" id="admin-tab-posts">
+      <details open style="margin-bottom:1.5rem">
+        <summary style="cursor:pointer;font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:1rem">＋ New Post</summary>
+        <div style="padding-top:0.75rem">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="new-cat">
+              <option value="news">🗞️ News</option>
+              <option value="maintenance">🧑‍🔧 Maintenance</option>
+              <option value="cosmetics">✨ Cosmetics</option>
+              <option value="brawlpass">🎟️ Brawl Pass</option>
+              <option value="brawltalk">📢 Brawl Talk</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="new-title" placeholder="Post title…" />
+          </div>
+          <div class="form-group">
+            <label>Excerpt (short preview)</label>
+            <input type="text" id="new-excerpt" placeholder="One-line summary…" />
+          </div>
+          <div class="form-group">
+            <label>Full content</label>
+            <textarea id="new-body" placeholder="Write the full article here…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Banner image</label>
+            <input type="file" id="image-upload" accept="image/*" />
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Or enter URL below</div>
+          </div>
+          <div class="form-group">
+            <label>Banner image URL</label>
+            <input type="text" id="new-img" placeholder="https://…" />
+          </div>
+          <div class="form-group">
+            <label>Author</label>
+            <input type="text" id="new-author" placeholder="Your name" value="Admin" />
+          </div>
+          <button class="btn-publish" onclick="publishPost()" style="width:100%;margin-top:0.25rem">Publish Post</button>
+          <div class="auth-error" id="publish-error" style="margin-top:6px"></div>
+        </div>
+      </details>
+
+      <div style="font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:0.75rem">Manage Posts</div>
+      <div id="admin-post-list"></div>
+    </div>
+
+    <!-- Countdown tab -->
+    <div class="admin-tab-panel" id="admin-tab-countdown">
+      <details open style="margin-bottom:1.5rem">
+        <summary style="cursor:pointer;font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:1rem">＋ New Countdown</summary>
+        <div style="padding-top:0.75rem">
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="cd-title" placeholder="e.g. Season 25 Start" />
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <input type="text" id="cd-desc" placeholder="Short description…" />
+          </div>
+          <div class="form-group">
+            <label>Target date &amp; time</label>
+            <input type="datetime-local" id="cd-date" />
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="cd-estimate" style="width:auto;accent-color:var(--purple)" />
+            <label for="cd-estimate" style="text-transform:none;letter-spacing:0;font-size:13px;margin-bottom:0;cursor:pointer">Mark date as estimate (*)</label>
+          </div>
+          <button class="btn-publish" onclick="createCountdown()" style="width:100%;margin-top:0.25rem">Add Countdown</button>
+          <div class="auth-error" id="cd-error" style="margin-top:6px"></div>
+        </div>
+      </details>
+
+      <div style="font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:0.75rem">Active Countdowns</div>
+      <div id="admin-cd-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════
+   BrawlMap News CMS
+═══════════════════════════════ */
+
+const CATEGORY_META = {
+  news:        { label: 'News',        emoji: '🗞️',  cls: 'cat-news'       },
+  maintenance: { label: 'Maintenance', emoji: '🧑‍🔧', cls: 'cat-maintenance' },
+  cosmetics:   { label: 'Cosmetics',   emoji: '✨',  cls: 'cat-cosmetics'   },
+  brawlpass:   { label: 'Brawl Pass',  emoji: '🎟️',  cls: 'cat-brawlpass'  },
+  brawltalk:   { label: 'Brawl Talk',  emoji: '📢',  cls: 'cat-brawltalk'  },
+};
+
+let currentFilter = 'all';
+let adminToken = null;
+let allPosts   = [];
+
+/* ── Safe JSON fetch ── */
+async function safeFetchJson(res) {
+  const text = await res.text();
+  if (!text) return null;
+  try { return JSON.parse(text); }
+  catch (_) { return { __rawText: text }; }
+}
+
+const CMS_API = 'http://localhost:5000';
+
+async function apiGet(url) {
+  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
+  const headers = {};
+  if (adminToken) headers['X-Admin-Token'] = adminToken;
+  const res = await fetch(fullUrl, { headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return safeFetchJson(res);
+}
+
+async function apiPost(url, data) {
+  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
+  const headers = { 'Content-Type': 'application/json' };
+  if (adminToken) headers['X-Admin-Token'] = adminToken;
+  const res = await fetch(fullUrl, { method: 'POST', headers, body: JSON.stringify(data) });
+  const j = await safeFetchJson(res);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${j?.error || j?.__rawText || 'Request failed'}`);
+  return j;
+}
+
+async function apiDelete(url) {
+  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
+  const headers = {};
+  if (adminToken) headers['X-Admin-Token'] = adminToken;
+  const res = await fetch(fullUrl, { method: 'DELETE', headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+/* ── Load posts ── */
+async function loadPosts() {
+  try {
+    allPosts = await apiGet('/cms/posts') || [];
+    return allPosts;
+  } catch (err) {
+    console.error('Failed to load posts:', err);
+    allPosts = [];
+    return [];
+  }
+}
+
+/* ── Render feed ── */
+async function renderFeed() {
+  const posts = await loadPosts();
+  const feed = document.getElementById('news-feed');
+  const filtered = currentFilter === 'all'
+    ? posts
+    : posts.filter(p => p.category === currentFilter);
+
+  if (filtered.length === 0) {
+    feed.innerHTML = `
+      <div class="news-empty">
+        <div class="news-empty-icon">📭</div>
+        <h3>No posts yet</h3>
+        <p>${currentFilter === 'all' ? 'No news published yet.' : 'No posts in this category.'}</p>
+      </div>`;
+    return;
+  }
+
+  feed.innerHTML = filtered.map(post => {
+    const meta = CATEGORY_META[post.category] || CATEGORY_META.news;
+    const date = new Date(post.createdAt).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+    const banner = post.image
+      ? `<img class="news-card-banner" src="${esc(post.image)}" alt="" onerror="this.style.display='none'">`
+      : `<div class="news-card-banner-placeholder">${meta.emoji}</div>`;
+    return `
+      <a class="news-card" href="#post-${post.id}" onclick="openPost('${post.id}');return false;">
+        ${banner}
+        <div class="news-card-body">
+          <div class="news-card-meta">
+            <span class="news-card-category ${meta.cls}">${meta.label}</span>
+            By ${esc(post.author)} · ${date}
+          </div>
+          <div class="news-card-title">${esc(post.title)}</div>
+          <div class="news-card-excerpt">${esc(post.excerpt)}</div>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+/* ── Category filter ── */
+function filterCat(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderFeed();
+}
+
+/* ══════════════════════════════
+   SINGLE POST PAGE ROUTING
+══════════════════════════════ */
+function showView(view) {
+  document.getElementById('view-feed').classList.remove('active');
+  document.getElementById('view-post').classList.remove('active');
+  document.getElementById('view-' + view).classList.add('active');
+}
+
+async function openPost(id) {
+  // Ensure posts are loaded
+  if (!allPosts.length) await loadPosts();
+  const post = allPosts.find(p => p.id === id);
+  if (!post) return;
+
+  const meta = CATEGORY_META[post.category] || CATEGORY_META.news;
+  const date = new Date(post.createdAt).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric'
+  });
+
+  const banner = post.image
+    ? `<img class="post-banner" src="${esc(post.image)}" alt="">`
+    : '';
+
+  document.getElementById('post-content').innerHTML = `
+    ${banner}
+    <div style="margin-bottom:0.75rem">
+      <span class="news-card-category ${meta.cls}">${meta.label}</span>
+    </div>
+    <div class="post-title">${esc(post.title)}</div>
+    <div class="post-meta">
+      <span>By ${esc(post.author)}</span>
+      <span style="color:var(--border2)">·</span>
+      <span>${date}</span>
+    </div>
+    <div class="post-body">${esc(post.body)}</div>
+  `;
+
+  // Update URL hash so it's shareable
+  history.pushState({ postId: id }, '', `#post-${id}`);
+  document.title = `${post.title} — BrawlMap`;
+  showView('post');
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  history.pushState({}, '', window.location.pathname);
+  document.title = 'BrawlMap — News';
+  showView('feed');
+}
+
+/* Handle browser back/forward */
+window.addEventListener('popstate', () => {
+  const hash = window.location.hash;
+  if (hash.startsWith('#post-')) {
+    const id = hash.slice(6);
+    openPost(id);
+  } else {
+    document.title = 'BrawlMap — News';
+    showView('feed');
+  }
+});
+
+/* On load, check if URL has a post hash */
+async function handleInitialHash() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#post-')) {
+    await loadPosts();
+    openPost(hash.slice(6));
+  }
+}
+
+/* ══════════════════════════════
+   COUNTDOWNS (localStorage)
+══════════════════════════════ */
+const CD_KEY = 'brawlmap_countdowns';
+
+function loadCountdowns() {
+  try { return JSON.parse(localStorage.getItem(CD_KEY) || '[]'); }
+  catch(_) { return []; }
+}
+
+function saveCountdowns(list) {
+  localStorage.setItem(CD_KEY, JSON.stringify(list));
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function cdTimeStr(targetMs) {
+  const diff = targetMs - Date.now();
+  if (diff <= 0) return { text: 'Event started!', ended: true };
+  const days    = Math.floor(diff / 86400000);
+  const hours   = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  const text = days > 0
+    ? `${days}:${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return { text, ended: false };
+}
+
+let cdTimerHandle = null;
+
+function renderCountdowns() {
+  const list = loadCountdowns();
+  const section = document.getElementById('countdowns-section');
+  const grid    = document.getElementById('countdowns-grid');
+
+  if (cdTimerHandle) clearInterval(cdTimerHandle);
+
+  if (list.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+
+  function updateTimes() {
+    list.forEach(cd => {
+      const el = document.getElementById(`cd-time-${cd.id}`);
+      if (!el) return;
+      const { text, ended } = cdTimeStr(cd.targetMs);
+      el.textContent = text;
+      el.className = 'cd-time' + (ended ? ' ended' : '');
+    });
+  }
+
+  grid.innerHTML = list.map(cd => {
+    const dateStr = new Date(cd.targetMs).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric'
+    });
+    const { text, ended } = cdTimeStr(cd.targetMs);
+    const deleteBtn = adminToken
+      ? `<button class="btn-cd-delete" onclick="deleteCountdown('${cd.id}')">Remove</button>`
+      : '';
+    return `
+      <div class="cd-news-card">
+        <div class="cd-label"><span>⏳</span>Countdown${cd.estimate ? ' *' : ''}</div>
+        <div class="cd-title">${esc(cd.title)}</div>
+        ${cd.desc ? `<div class="cd-desc">${esc(cd.desc)}</div>` : ''}
+        <div class="cd-time${ended ? ' ended' : ''}" id="cd-time-${cd.id}">${text}</div>
+        <div class="cd-footer">📅 ${dateStr}</div>
+        ${deleteBtn}
+      </div>`;
+  }).join('');
+
+  cdTimerHandle = setInterval(updateTimes, 1000);
+}
+
+function createCountdown() {
+  const title    = document.getElementById('cd-title').value.trim();
+  const desc     = document.getElementById('cd-desc').value.trim();
+  const dateVal  = document.getElementById('cd-date').value;
+  const estimate = document.getElementById('cd-estimate').checked;
+  const errEl    = document.getElementById('cd-error');
+
+  if (!title || !dateVal) {
+    errEl.textContent = 'Title and date are required.';
+    return;
+  }
+  errEl.textContent = '';
+
+  const targetMs = new Date(dateVal).getTime();
+  if (isNaN(targetMs)) {
+    errEl.textContent = 'Invalid date.';
+    return;
+  }
+
+  const list = loadCountdowns();
+  list.push({
+    id:       Math.random().toString(36).slice(2),
+    title,
+    desc,
+    targetMs,
+    estimate,
+    createdAt: Date.now()
+  });
+  saveCountdowns(list);
+
+  // Clear form
+  document.getElementById('cd-title').value = '';
+  document.getElementById('cd-desc').value  = '';
+  document.getElementById('cd-date').value  = '';
+  document.getElementById('cd-estimate').checked = false;
+
+  renderCountdowns();
+  renderAdminCdList();
+}
+
+function deleteCountdown(id) {
+  if (!confirm('Remove this countdown?')) return;
+  const list = loadCountdowns().filter(c => c.id !== id);
+  saveCountdowns(list);
+  renderCountdowns();
+  renderAdminCdList();
+}
+
+function renderAdminCdList() {
+  const list = loadCountdowns();
+  const el   = document.getElementById('admin-cd-list');
+  if (!el) return;
+  if (list.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">No countdowns yet.</div>';
+    return;
+  }
+  el.innerHTML = list.map(cd => {
+    const dateStr = new Date(cd.targetMs).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+    return `
+      <div class="admin-post-item">
+        <div class="admin-post-item-title">${esc(cd.title)}${cd.estimate ? ' *' : ''}<span style="color:var(--text3);font-weight:600;font-size:11px;margin-left:8px">${dateStr}</span></div>
+        <button class="btn-delete" onclick="deleteCountdown('${cd.id}');renderAdminCdList()">Delete</button>
+      </div>`;
+  }).join('');
+}
+
+/* ── Admin tabs ── */
+function switchAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-tab-' + tab).classList.add('active');
+  if (tab === 'countdown') renderAdminCdList();
+}
+
+/* ── Auth ── */
+function openAdminGate() {
+  if (adminToken) { openAdminPanel(); return; }
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-pw').value = '';
+  openModal('modal-auth');
+  setTimeout(() => document.getElementById('auth-pw').focus(), 100);
+}
+
+async function tryLogin() {
+  const pw = document.getElementById('auth-pw').value;
+  try {
+    const res = await fetch(CMS_API + '/cms/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await safeFetchJson(res) || {};
+    if (!res.ok) throw new Error(data.error || data.__rawText || `Login failed (HTTP ${res.status})`);
+    adminToken = data.token;
+    closeModal('modal-auth');
+    openAdminPanel();
+  } catch (err) {
+    document.getElementById('auth-error').textContent = err.message || 'Wrong password.';
+  }
+}
+
+function logoutAdmin() {
+  adminToken = null;
+  closeModal('modal-admin');
+  renderCountdowns(); // re-render to hide delete buttons
+}
+
+/* ── Admin panel ── */
+async function openAdminPanel() {
+  await renderAdminList();
+  renderAdminCdList();
+  renderCountdowns(); // show delete buttons
+  openModal('modal-admin');
+}
+
+async function renderAdminList() {
+  const posts = await loadPosts();
+  const el = document.getElementById('admin-post-list');
+  if (posts.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">No posts yet.</div>';
+    return;
+  }
+  el.innerHTML = posts.map(p => `
+    <div class="admin-post-item">
+      <div class="admin-post-item-title">${esc(p.title)}</div>
+      <button class="btn-delete" onclick="deletePost('${p.id}')">Delete</button>
+    </div>`).join('');
+}
+
+async function deletePost(id) {
+  if (!confirm('Delete this post?')) return;
+  try {
+    await apiDelete(`/cms/posts/${id}`);
+    renderFeed();
+    renderAdminList();
+  } catch (err) {
+    alert('Failed to delete post: ' + err.message);
+  }
+}
+
+/* ── Publish post ── */
+async function publishPost() {
+  const title   = document.getElementById('new-title').value.trim();
+  const excerpt = document.getElementById('new-excerpt').value.trim();
+  const body    = document.getElementById('new-body').value.trim();
+  const cat     = document.getElementById('new-cat').value;
+  const img     = document.getElementById('new-img').value.trim();
+  const author  = document.getElementById('new-author').value.trim() || 'Admin';
+  const errEl   = document.getElementById('publish-error');
+
+  if (!title || !excerpt || !body) {
+    errEl.textContent = 'Title, excerpt, and content are required.';
+    return;
+  }
+  errEl.textContent = '';
+
+  try {
+    await apiPost('/cms/posts', { title, excerpt, body, category: cat, image: img, author });
+    ['new-title','new-excerpt','new-body','new-img'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('new-author').value = 'Admin';
+    renderFeed();
+    renderAdminList();
+  } catch (err) {
+    errEl.textContent = 'Failed to publish: ' + err.message;
+  }
+}
+
+/* ── Image upload ── */
+async function uploadImage() {
+  const fileInput = document.getElementById('image-upload');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const res = await fetch(CMS_API + '/cms/upload', {
+      method: 'POST',
+      headers: { 'X-Admin-Token': adminToken },
+      body: formData
+    });
+    const data = await safeFetchJson(res) || {};
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${data.error || 'Upload failed'}`);
+    document.getElementById('new-img').value = data.url || '';
+    fileInput.value = '';
+    alert('Image uploaded successfully!');
+  } catch (err) {
+    alert('Upload failed: ' + err.message);
+  }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* Close on backdrop click */
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* File upload handler */
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('image-upload');
+  if (fileInput) fileInput.addEventListener('change', uploadImage);
+});
+
+/* ── Init ── */
+renderFeed();
+renderCountdowns();
+handleInitialHash();
+</script>
+</body>
+</html>

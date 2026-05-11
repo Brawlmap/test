@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Countdown - BrawlMap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<!-- ══════════════════════════════════════════════════════
+     COUNTDOWN PAGE
+══════════════════════════════════════════════════════ -->
+<div class="page active" id="page-countdown">
+  <div class="standalone-wrap">
+    <div class="standalone-header">
+      <h1>Countdown</h1>
+      <p>A live countdown showing the remaining time until the event begins. An asterisk "*" next to the title means the date is just an estimate </p>
+      ️
+    </div>
+
+    <div class="countdown-grid">
+      <div class="countdown-card">
+        <div class="cd-label"><span>📅</span>Next Event</div>
+        <div class="cd-subtitle">December 5, 2026</div>
+        <div class="cd-desc">Countdown to the next major Brawl Stars event. Stay tuned for updates!</div>
+        <div class="cd-time" id="countdown-timer"></div>
+        <div class="cd-footer">🕐 December 5, 2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function updateCountdown() {
+  const targetDate = new Date('2026-12-05T00:00:00');
+  const now = new Date();
+  const diff = targetDate - now;
+
+  if (diff <= 0) {
+    document.getElementById('countdown-timer').textContent = '00:00:00:00';
+    document.getElementById('countdown-timer').className = 'cd-time ended';
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  const timeString = days > 0 ? `${days}:${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  document.getElementById('countdown-timer').textContent = timeString;
+  document.getElementById('countdown-timer').className = 'cd-time';
+}
+
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+
+</body>
+</html>

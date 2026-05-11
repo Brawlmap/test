@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrawlMap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<!-- ══════════════════════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-wrap">
+
+    <div class="hero-update">
+      <h1>Added Brawler Trio Pages and several UI improvements to enhance overall navigation and usability</h1>
+      <p>Track your brawlers, compare players, and view global rankings, all in one place.</p>
+      <div class="hero-update-btns">
+        <a class="btn-update" href="changelog.html">Update 3.0.0</a>
+        <a class="btn-ghost"  href="changelog.html">Changelog</a>
+      </div>
+    </div>
+
+    <div id="categories-section">
+      <div class="section-title">Categories</div>
+      <div class="section-sub">Choose a category to view items</div>
+      <div class="categories-grid">
+
+        <div class="category-card" href="news.html">
+          <div class="category-icon">🗞️</div>
+          <div class="cat-divider"></div>
+          <div class="category-body">
+            <div class="category-name">News</div>
+            <div class="category-desc">Latest game news and announcements</div>
+          </div>
+        </div>
+
+        <div class="category-card disabled">
+          <div class="category-icon">🧑‍🔧</div>
+          <div class="cat-divider"></div>
+          <div class="category-body">
+            <div class="category-name">Maintenance</div>
+            <div class="category-desc">Downtime announcements, server updates and fixes</div>
+          </div>
+        </div>
+
+        <div class="category-card disabled">
+          <div class="category-icon">✨</div>
+          <div class="cat-divider"></div>
+          <div class="category-body">
+            <div class="category-name">Cosmetics</div>
+            <div class="category-desc">See full releases, images, and details after each update</div>
+          </div>
+        </div>
+
+        <div class="category-card disabled">
+          <div class="category-icon">🎟️</div>
+          <div class="cat-divider"></div>
+          <div class="category-body">
+            <div class="category-name">Brawl Pass</div>
+            <div class="category-desc">New season, new rewards! Grab your BP and claim exclusive goodies</div>
+          </div>
+        </div>
+
+        <div class="category-card disabled">
+          <div class="category-icon" style="font-size:12px;font-weight:900;color:var(--gold);font-family:'Lilita One',cursive;line-height:1.2;text-align:center">BRAWL<br>TALK</div>
+          <div class="cat-divider"></div>
+          <div class="category-body">
+            <div class="category-name">Brawl Talks</div>
+            <div class="category-desc">Official updates, new brawlers, skins, and event announcements</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TRIOS PAGE
+══════════════════════════════════════════════════════ -->
+<!-- Trios content moved to trios.html -->
+
+<script>
+const API = 'http://localhost:5000';
+
+/* ── Navigation ── */
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (tab && tab.classList) tab.classList.add('active');
+}
+
+function jumpSection(id) {
+  showPage('home', null);
+  document.querySelector('.nav-tab').classList.add('active');
+  setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+}
+
+
+
+/* ── Brawlers ── */
+function fmtTag(t){t=t.trim().toUpperCase();return t.startsWith('#')?t:'#'+t;}
+
+
+function showErr(id,msg){const el=document.getElementById(id);if(!msg){el.style.display='none';return;}el.textContent=msg;el.style.display='block';}
+
+</script>
+</body>
+</html>

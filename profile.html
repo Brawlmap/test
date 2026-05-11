@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrawlMap — Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+  <link rel="stylesheet" href="components/stat-card.css">
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<div class="page active" id="page-profile">
+  <div class="inner-page profile-inner">
+    <h2>PROFILE STATS</h2>
+    <p class="sub">View detailed player statistics and brawler collection</p>
+
+    <!-- Step 1: Tag entry — always visible -->
+    <div class="card profile-tag-card">
+      <div class="profile-tag-row">
+        <div class="input-group" style="flex:1">
+          <label>Player Tag</label>
+          <input type="text" id="profile-tag" placeholder="#ABC123" onkeydown="if(event.key==='Enter')searchTag()" />
+        </div>
+        <button class="btn btn-gold" onclick="searchTag()">Search</button>
+      </div>
+      <div class="error" id="profile-error"></div>
+      <div class="loading" id="profile-loading"><span class="spinner"></span>Loading...</div>
+    </div>
+
+    <!-- Step 2: Tabs + content — only shown after valid tag -->
+    <div id="profile-main" style="display:none">
+      <div class="profile-header-bar">
+        <div>
+          <div class="profile-header-name" id="profile-name"></div>
+          <div class="profile-header-tag" id="profile-tag-display"></div>
+        </div>
+        <div class="profile-tabs">
+          <button class="profile-tab-btn active" onclick="showProfileTab('stats', this)">Stats</button>
+          <button class="profile-tab-btn" onclick="showProfileTab('brawlers', this)">Brawlers</button>
+        </div>
+      </div>
+
+      <!-- Stats tab -->
+      <div class="profile-content active" id="profile-stats">
+        <div class="profile-stats-grid" id="profile-stats-grid"></div>
+      </div>
+
+      <!-- Brawlers tab -->
+      <div class="profile-content" id="profile-brawlers">
+        <div class="tier-summary" id="br-summary"></div>
+        <div class="brawler-grid" id="br-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000';
+const labels = {
+  purple: '⚡ hyperchange',
+  red: 'Level 11',
+  yellow: 'Level 9+',
+  green: 'Level 7+',
+  grey: 'Below level 7'
+};
+let _cachedData = null;
+
+function showProfileTab(tab, btn) {
+  document.querySelectorAll('.profile-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.profile-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('profile-' + tab).classList.add('active');
+}
+
+
+function fmtTag(t) { t = t.trim().toUpperCase(); return t.startsWith('#') ? t : '#' + t; }
+
+async function safeFetchJson(res) {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Invalid JSON from ${res.url} (${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
+async function searchTag() {
+  const raw = document.getElementById('profile-tag').value.trim();
+  if (!raw) { showErr('profile-error', 'Enter a player tag.'); return; }
+  const tag = fmtTag(raw);
+  showErr('profile-error', null);
+  document.getElementById('profile-loading').style.display = 'block';
+  document.getElementById('profile-main').style.display = 'none';
+
+  try {
+    const [statsRes, brawlersRes] = await Promise.all([
+      fetch(`${API}/player/${encodeURIComponent(tag)}`),
+      fetch(`${API}/player/${encodeURIComponent(tag)}/brawlers`)
+    ]);
+    const statsData    = await safeFetchJson(statsRes);
+    const brawlersData = await safeFetchJson(brawlersRes);
+    if (!statsRes.ok) throw new Error((statsData && statsData.error) || `HTTP ${statsRes.status}`);
+    if (!brawlersRes.ok) throw new Error((brawlersData && brawlersData.error) || `HTTP ${brawlersRes.status}`);
+    if (statsData?.error)    throw new Error(statsData.error);
+    if (brawlersData?.error) throw new Error(brawlersData.error);
+
+    displayProfile(statsData);
+    displayBrawlers(brawlersData);
+
+    document.getElementById('profile-main').style.display = 'block';
+    // always start on Stats tab
+    showProfileTab('stats', document.querySelector('.profile-tab-btn'));
+  } catch (e) {
+    showErr('profile-error', e.message);
+  } finally {
+    document.getElementById('profile-loading').style.display = 'none';
+  }
+}
+
+function displayProfile(data) {
+  document.getElementById('profile-name').textContent = data.name;
+  document.getElementById('profile-tag-display').textContent = data.tag;
+  const trophy = `<img src="Stuff/trophy.webp" alt="" style="width:14px;height:14px;vertical-align:middle;margin-right:4px">`;
+  document.getElementById('profile-stats-grid').innerHTML = [
+    ['Trophies',         trophy + (data.trophies ?? '—')],
+    ['Highest Trophies', trophy + (data.highestTrophies ?? '—')],
+    ['3v3 Victories',    data['3vs3Victories'] ?? '—'],
+    ['Solo Victories',   data.soloVictories ?? '—'],
+    ['Duo Victories',    data.duoVictories ?? '—'],
+    ['Club',             data.club?.name ?? '—'],
+    ['Level',            data.expLevel ?? '—'],
+    ['Qualified',        data.isQualifiedFromChampionshipChallenge ? 'Yes' : 'No'],
+  ].map(([label, val]) => `
+    <div class="stat-card">
+      <div class="stat-card-label">${label}</div>
+      <div class="stat-card-value">${val}</div>
+    </div>`).join('');
+}
+
+function displayBrawlers(data) {
+  document.getElementById('profile-name').textContent = data.name;
+  document.getElementById('profile-tag-display').textContent  = data.tag;
+  const brawlers = data.brawlers || [];
+  if (brawlers.length) console.log('🔍 sample brawler fields:', JSON.stringify(brawlers[0]));
+  const counts = { purple:0, red:0, yellow:0, green:0, grey:0 };
+  brawlers.forEach(b => {
+    const t = getTier(b);
+    counts[t]++;
+  });
+  document.getElementById('br-summary').innerHTML = Object.entries(counts)
+    .filter(([,n])=>n>0)
+    .sort((a,b)=>['purple','red','yellow','green','grey'].indexOf(a[0]) - ['purple','red','yellow','green','grey'].indexOf(b[0]))
+    .map(([t, n]) => `<div class="tier-chip chip-${t}">${labels[t]} (${n})</div>`).join('');
+
+  document.getElementById('br-grid').innerHTML = brawlers.map(b => {
+    const tier  = getTier(b);
+    const hasHC = b.hasHypercharge;
+    return `<div class="brawler-pill tier-${tier}">
+    ${hasHC ? '<img class="hc-badge" src="stuff/hc.png" alt="HC">' : ''}
+      <div class="brawler-pill-name">${b.name}</div>
+      <div class="brawler-pill-power">${b.power}</div>
+      <div class="brawler-pill-trophy"><img src="Stuff/trophy.webp" alt="" style="width:12px;height:12px;vertical-align:middle;margin-right:2px">${b.trophies?.toLocaleString() ?? 0}</div>
+      <div class="pill-dots">
+        ${[...Array(2)].map((_,i) => `<div class="dot${i < (b.gadgets || 0) ? ' dot-gadget' : ' dot-empty'}"></div>`).join('')}
+        <div class="dot" style="background:transparent;width:4px"></div>
+        ${[...Array(2)].map((_,i) => `<div class="dot${i < (b.starPowers || 0) ? ' dot-starpow' : ' dot-empty'}"></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getTier(b) {
+  /* Brawl Stars API fields: hasHypercharge (bool), starPowers (arr), gadgets (arr) */
+  const hasHC = b.hasHypercharge;
+  if (b.power >= 11 && hasHC) return 'purple';
+  if (b.power >= 11)          return 'red';
+  if (b.power >= 9)           return 'yellow';
+  if (b.power >= 7)           return 'green';
+  return 'grey';
+}
+
+function filterBrawlers(tier, btn) {
+  document.querySelectorAll('#profile-brawlers .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#br-grid .brawler-pill').forEach(item => {
+    item.style.display = (tier === 'all' || item.classList.contains('tier-' + tier)) ? '' : 'none';
+  });
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+</script>
+</body>
+</html>
