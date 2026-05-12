@@ -585,7 +585,7 @@ async function safeFetchJson(res) {
   catch (_) { return { __rawText: text }; }
 }
 
-const CMS_API = 'http://localhost:5000';
+const CMS_API = 'https://test-production-182c.up.railway.app';
 
 async function apiGet(url) {
   const fullUrl = url.startsWith('http') ? url : CMS_API + url;
