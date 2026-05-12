@@ -784,6 +784,7 @@ function renderCountdowns() {
   const list = loadCountdowns();
   const section = document.getElementById('countdowns-section');
   const grid    = document.getElementById('countdowns-grid');
+  if (!section && !grid) return; // countdowns moved to countdown.html
 
   if (cdTimerHandle) clearInterval(cdTimerHandle);
 
