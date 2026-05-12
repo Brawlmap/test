@@ -126,10 +126,8 @@ def require_auth():
 
 # ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
-@app.route("/cms/login", methods=["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])
+@app.route("/cms/login", methods=["POST"])
 def cms_login():
-    if request.method != "POST":
-        return jsonify({"error": "POST required", "method": request.method}), 405
 
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
     if not _check_rate_limit(ip):
