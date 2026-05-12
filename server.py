@@ -126,8 +126,16 @@ def require_auth():
 
 # ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
-@app.route("/cms/login", methods=["POST"])
+@app.route("/cms/login", methods=["POST", "OPTIONS"])
 def cms_login():
+    if request.method == "OPTIONS":
+        from flask import make_response
+        resp = make_response()
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Token"
+        resp.status_code = 204
+        return resp
 
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
     if not _check_rate_limit(ip):
