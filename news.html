@@ -418,11 +418,6 @@
       <button class="admin-toggle" onclick="openAdminGate()">✏️ Admin</button>
     </div>
 
-    <!-- Countdowns visible to everyone -->
-    <div class="countdowns-section" id="countdowns-section" style="display:none">
-      <div class="section-title">⏳ Countdowns</div>
-      <div class="countdowns-grid" id="countdowns-grid"></div>
-    </div>
 
     <div class="category-filters" id="cat-filters">
       <button class="cat-pill active" data-cat="all" onclick="filterCat('all', this)">All</button>
@@ -650,8 +645,11 @@ async function renderFeed() {
     const date = new Date(post.createdAt).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric'
     });
-    const banner = post.image
-      ? `<img class="news-card-banner" src="${esc(post.image)}" alt="" onerror="this.style.display='none'">`
+    const imgSrc = post.image
+      ? (post.image.startsWith('http') ? post.image : CMS_API + post.image)
+      : null;
+    const banner = imgSrc
+      ? `<img class="news-card-banner" src="${esc(imgSrc)}" alt="" onerror="this.style.display='none'">`
       : `<div class="news-card-banner-placeholder">${meta.emoji}</div>`;
     return `
       <a class="news-card" href="#post-${post.id}" onclick="openPost('${post.id}');return false;">
@@ -696,8 +694,11 @@ async function openPost(id) {
     month: 'long', day: 'numeric', year: 'numeric'
   });
 
-  const banner = post.image
-    ? `<img class="post-banner" src="${esc(post.image)}" alt="">`
+  const postImgSrc = post.image
+    ? (post.image.startsWith('http') ? post.image : CMS_API + post.image)
+    : null;
+  const banner = postImgSrc
+    ? `<img class="post-banner" src="${esc(postImgSrc)}" alt="">`
     : '';
 
   document.getElementById('post-content').innerHTML = `

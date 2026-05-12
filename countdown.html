@@ -6,61 +6,121 @@
   <title>Countdown - BrawlMap</title>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="designed.css">
+  <style>
+    .standalone-wrap { max-width: 93%; margin: 0 auto; padding: 2.5rem 0.1rem 4rem; }
+    .standalone-header { margin-bottom: 2rem; }
+    .standalone-header h1 { font-family: 'Lilita One', cursive; font-size: 2rem; color: var(--text); }
+    .standalone-header p  { font-size: 14px; color: var(--text2); margin-top: 0.4rem; }
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .cd-news-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .cd-label  { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:800; color:var(--text2); text-transform:uppercase; letter-spacing:0.7px; }
+    .cd-title  { font-size:14px; font-weight:800; color:var(--text); }
+    .cd-desc   { font-size:12.5px; color:var(--text2); line-height:1.5; }
+    .cd-time   { font-family:'Lilita One',cursive; font-size:24px; color:#fff; letter-spacing:1px; margin-top:4px; }
+    .cd-time.ended { color:var(--text3); font-size:16px; }
+    .cd-footer { font-size:11px; color:var(--text3); margin-top:2px; }
+    .cd-empty  { text-align:center; padding:4rem 1rem; color:var(--text3); grid-column:1/-1; }
+    .cd-empty-icon { font-size:3rem; margin-bottom:1rem; }
+    .cd-empty h3 { font-size:1.1rem; color:var(--text2); margin-bottom:0.4rem; }
+  </style>
 </head>
 <body>
 <div id="nav-root"></div>
 <script src="nav-loader.js"></script>
 
-<!-- ══════════════════════════════════════════════════════
-     COUNTDOWN PAGE
-══════════════════════════════════════════════════════ -->
 <div class="page active" id="page-countdown">
   <div class="standalone-wrap">
     <div class="standalone-header">
-      <h1>Countdown</h1>
-      <p>A live countdown showing the remaining time until the event begins. An asterisk "*" next to the title means the date is just an estimate </p>
-      ️
+      <h1>⏳ Countdowns</h1>
+      <p>Live countdowns to upcoming Brawl Stars events. An asterisk (*) means the date is an estimate.</p>
     </div>
-
-    <div class="countdown-grid">
-      <div class="countdown-card">
-        <div class="cd-label"><span>📅</span>Next Event</div>
-        <div class="cd-subtitle">December 5, 2026</div>
-        <div class="cd-desc">Countdown to the next major Brawl Stars event. Stay tuned for updates!</div>
-        <div class="cd-time" id="countdown-timer"></div>
-        <div class="cd-footer">🕐 December 5, 2026</div>
-      </div>
-    </div>
+    <div class="countdown-grid" id="countdown-grid"></div>
   </div>
 </div>
 
 <script>
+const CD_KEY = 'brawlmap_countdowns';
+
+function loadCountdowns() {
+  try { return JSON.parse(localStorage.getItem(CD_KEY) || '[]'); }
+  catch(_) { return []; }
+}
+
 function pad(n) { return String(n).padStart(2,'0'); }
 
-function updateCountdown() {
-  const targetDate = new Date('2026-12-05T00:00:00');
-  const now = new Date();
-  const diff = targetDate - now;
+function cdTimeStr(targetMs) {
+  const diff = targetMs - Date.now();
+  if (diff <= 0) return { text: 'Event started!', ended: true };
+  const days    = Math.floor(diff / 86400000);
+  const hours   = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  const text = days > 0
+    ? `${days}:${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return { text, ended: false };
+}
 
-  if (diff <= 0) {
-    document.getElementById('countdown-timer').textContent = '00:00:00:00';
-    document.getElementById('countdown-timer').className = 'cd-time ended';
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderCountdowns() {
+  const list = loadCountdowns();
+  const grid = document.getElementById('countdown-grid');
+
+  if (list.length === 0) {
+    grid.innerHTML = `
+      <div class="cd-empty">
+        <div class="cd-empty-icon">⏳</div>
+        <h3>No countdowns yet</h3>
+        <p>Admins can add countdowns from the News page.</p>
+      </div>`;
     return;
   }
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  grid.innerHTML = list.map(cd => {
+    const dateStr = new Date(cd.targetMs).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric'
+    });
+    const { text, ended } = cdTimeStr(cd.targetMs);
+    return `
+      <div class="cd-news-card">
+        <div class="cd-label"><span>⏳</span>Countdown${cd.estimate ? ' *' : ''}</div>
+        <div class="cd-title">${esc(cd.title)}</div>
+        ${cd.desc ? `<div class="cd-desc">${esc(cd.desc)}</div>` : ''}
+        <div class="cd-time${ended ? ' ended' : ''}" id="cd-time-${cd.id}">${text}</div>
+        <div class="cd-footer">📅 ${dateStr}</div>
+      </div>`;
+  }).join('');
 
-  const timeString = days > 0 ? `${days}:${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-  document.getElementById('countdown-timer').textContent = timeString;
-  document.getElementById('countdown-timer').className = 'cd-time';
+  function updateTimes() {
+    list.forEach(cd => {
+      const el = document.getElementById(`cd-time-${cd.id}`);
+      if (!el) return;
+      const { text, ended } = cdTimeStr(cd.targetMs);
+      el.textContent = text;
+      el.className = 'cd-time' + (ended ? ' ended' : '');
+    });
+  }
+  setInterval(updateTimes, 1000);
 }
 
-updateCountdown();
-setInterval(updateCountdown, 1000);
+renderCountdowns();
 </script>
-
 </body>
 </html>
