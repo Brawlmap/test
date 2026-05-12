@@ -827,7 +827,7 @@ function renderCountdowns() {
   cdTimerHandle = setInterval(updateTimes, 1000);
 }
 
-function createCountdown() {
+async function createCountdown() {
   const title    = document.getElementById('cd-title').value.trim();
   const desc     = document.getElementById('cd-desc').value.trim();
   const dateVal  = document.getElementById('cd-date').value;
@@ -846,39 +846,36 @@ function createCountdown() {
     return;
   }
 
-  const list = loadCountdowns();
-  list.push({
-    id:       Math.random().toString(36).slice(2),
-    title,
-    desc,
-    targetMs,
-    estimate,
-    createdAt: Date.now()
-  });
-  saveCountdowns(list);
-
-  // Clear form
-  document.getElementById('cd-title').value = '';
-  document.getElementById('cd-desc').value  = '';
-  document.getElementById('cd-date').value  = '';
-  document.getElementById('cd-estimate').checked = false;
-
-  renderCountdowns();
-  renderAdminCdList();
+  try {
+    await apiPost('/cms/countdowns', { title, desc, targetMs, estimate });
+    document.getElementById('cd-title').value = '';
+    document.getElementById('cd-desc').value  = '';
+    document.getElementById('cd-date').value  = '';
+    document.getElementById('cd-estimate').checked = false;
+    renderAdminCdList();
+  } catch(err) {
+    errEl.textContent = 'Failed to add: ' + err.message;
+  }
 }
 
-function deleteCountdown(id) {
+async function deleteCountdown(id) {
   if (!confirm('Remove this countdown?')) return;
-  const list = loadCountdowns().filter(c => c.id !== id);
-  saveCountdowns(list);
-  renderCountdowns();
-  renderAdminCdList();
+  try {
+    await apiDelete(`/cms/countdowns/${id}`);
+    renderAdminCdList();
+  } catch(err) {
+    alert('Failed to delete: ' + err.message);
+  }
 }
 
-function renderAdminCdList() {
-  const list = loadCountdowns();
-  const el   = document.getElementById('admin-cd-list');
+async function renderAdminCdList() {
+  const el = document.getElementById('admin-cd-list');
   if (!el) return;
+  let list = [];
+  try {
+    const res = await fetch(CMS_API + '/cms/countdowns');
+    list = await res.json();
+  } catch(_) {}
   if (list.length === 0) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px">No countdowns yet.</div>';
     return;
@@ -890,7 +887,7 @@ function renderAdminCdList() {
     return `
       <div class="admin-post-item">
         <div class="admin-post-item-title">${esc(cd.title)}${cd.estimate ? ' *' : ''}<span style="color:var(--text3);font-weight:600;font-size:11px;margin-left:8px">${dateStr}</span></div>
-        <button class="btn-delete" onclick="deleteCountdown('${cd.id}');renderAdminCdList()">Delete</button>
+        <button class="btn-delete" onclick="deleteCountdown('${cd.id}')">Delete</button>
       </div>`;
   }).join('');
 }

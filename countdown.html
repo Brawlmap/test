@@ -51,12 +51,7 @@
 </div>
 
 <script>
-const CD_KEY = 'brawlmap_countdowns';
-
-function loadCountdowns() {
-  try { return JSON.parse(localStorage.getItem(CD_KEY) || '[]'); }
-  catch(_) { return []; }
-}
+const CMS_API = 'https://test-production-182c.up.railway.app';
 
 function pad(n) { return String(n).padStart(2,'0'); }
 
@@ -79,16 +74,25 @@ function esc(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function renderCountdowns() {
-  const list = loadCountdowns();
+async function renderCountdowns() {
   const grid = document.getElementById('countdown-grid');
+  grid.innerHTML = '<div class="cd-empty"><div class="cd-empty-icon">⏳</div><p>Loading…</p></div>';
+
+  let list = [];
+  try {
+    const res = await fetch(CMS_API + '/cms/countdowns');
+    list = await res.json();
+  } catch(e) {
+    grid.innerHTML = '<div class="cd-empty"><div class="cd-empty-icon">⚠️</div><h3>Failed to load</h3></div>';
+    return;
+  }
 
   if (list.length === 0) {
     grid.innerHTML = `
       <div class="cd-empty">
         <div class="cd-empty-icon">⏳</div>
         <h3>No countdowns yet</h3>
-        <p>Admins can add countdowns from the News page.</p>
+        <p>Check back soon!</p>
       </div>`;
     return;
   }

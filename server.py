@@ -23,7 +23,8 @@ ADMIN_PASSWORD = os.getenv("CMS_PASSWORD")
 if not ADMIN_PASSWORD:
     raise RuntimeError("CMS_PASSWORD environment variable is not set. Server will not start without it.")
 
-NEWS_FILE  = os.path.join(os.path.dirname(__file__), "news_posts.json")
+NEWS_FILE       = os.path.join(os.path.dirname(__file__), "news_posts.json")
+COUNTDOWN_FILE  = os.path.join(os.path.dirname(__file__), "countdowns.json")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -115,10 +116,8 @@ def require_auth():
 
 # ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
-@app.route("/cms/login", methods=["POST", "OPTIONS"])
+@app.route("/cms/login", methods=["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])
 def cms_login():
-    if request.method == "OPTIONS":
-        return "", 204
     if request.method != "POST":
         return jsonify({"error": "POST required", "method": request.method}), 405
 
@@ -344,6 +343,69 @@ def rank_brawlers(country, brawler_id):
         return upstream_jsonify(r)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ── Countdown helpers ─────────────────────────────────────────────────────────
+
+def load_countdowns() -> list:
+    if not os.path.exists(COUNTDOWN_FILE):
+        return []
+    try:
+        with open(COUNTDOWN_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_countdowns(countdowns: list):
+    with open(COUNTDOWN_FILE, "w", encoding="utf-8") as f:
+        json.dump(countdowns, f, ensure_ascii=False, indent=2)
+
+# ── Countdown routes ──────────────────────────────────────────────────────────
+
+@app.route("/cms/countdowns", methods=["GET"])
+def cms_list_countdowns():
+    """Public — returns all countdowns sorted by targetMs."""
+    countdowns = load_countdowns()
+    countdowns.sort(key=lambda c: c.get("targetMs", 0))
+    return jsonify(countdowns)
+
+@app.route("/cms/countdowns", methods=["POST"])
+def cms_create_countdown():
+    err = require_auth()
+    if err: return err
+
+    data     = request.get_json(silent=True) or {}
+    title    = (data.get("title")   or "").strip()
+    desc     = (data.get("desc")    or "").strip()
+    targetMs = data.get("targetMs")
+    estimate = bool(data.get("estimate", False))
+
+    if not title or not targetMs:
+        return jsonify({"error": "title and targetMs are required"}), 400
+
+    countdown = {
+        "id":        uuid.uuid4().hex,
+        "title":     title,
+        "desc":      desc,
+        "targetMs":  int(targetMs),
+        "estimate":  estimate,
+        "createdAt": int(time.time() * 1000),
+    }
+    countdowns = load_countdowns()
+    countdowns.append(countdown)
+    save_countdowns(countdowns)
+    return jsonify(countdown), 201
+
+@app.route("/cms/countdowns/<cd_id>", methods=["DELETE"])
+def cms_delete_countdown(cd_id):
+    err = require_auth()
+    if err: return err
+
+    countdowns = load_countdowns()
+    new_list = [c for c in countdowns if c["id"] != cd_id]
+    if len(new_list) == len(countdowns):
+        return jsonify({"error": "Countdown not found"}), 404
+    save_countdowns(new_list)
+    return jsonify({"ok": True})
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
