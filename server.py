@@ -115,8 +115,10 @@ def require_auth():
 
 # ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
-@app.route("/cms/login", methods=["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])
+@app.route("/cms/login", methods=["POST", "OPTIONS"])
 def cms_login():
+    if request.method == "OPTIONS":
+        return "", 204
     if request.method != "POST":
         return jsonify({"error": "POST required", "method": request.method}), 405
 
