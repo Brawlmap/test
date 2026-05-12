@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS
 from dotenv import load_dotenv
 import requests, os, json, uuid, time, hmac, hashlib, secrets
 from collections import defaultdict
@@ -8,11 +7,22 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {
-    "origins": "*",
-    "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "X-Admin-Token"],
-}})
+@app.after_request
+def apply_cors(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Token"
+    return response
+
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        from flask import Response
+        r = Response()
+        r.headers["Access-Control-Allow-Origin"]  = "*"
+        r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        r.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Token"
+        return r, 204
 
 BASE_URL = "https://api.brawlstars.com/v1"
 API_KEY  = os.getenv("BRAWL_STARS_API_KEY")
@@ -116,10 +126,8 @@ def require_auth():
 
 # ── CMS: Auth ─────────────────────────────────────────────────────────────────
 
-@app.route("/cms/login", methods=["POST", "OPTIONS"])
+@app.route("/cms/login", methods=["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])
 def cms_login():
-    if request.method == "OPTIONS":
-        return "", 204
     if request.method != "POST":
         return jsonify({"error": "POST required", "method": request.method}), 405
 

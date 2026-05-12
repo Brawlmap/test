@@ -1,5 +1,4 @@
-flask
-flask-cors
+-e flask
 python-dotenv
 requests
 rich
