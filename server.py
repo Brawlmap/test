@@ -8,10 +8,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# ── CORS: lock to your domain in production ──────────────────────────────────
-# Change ALLOWED_ORIGIN in .env to your real domain, e.g. https://brawlmap.gg
-ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
-CORS(app, origins=ALLOWED_ORIGIN)
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "X-Admin-Token"],
+}})
 
 BASE_URL = "https://api.brawlstars.com/v1"
 API_KEY  = os.getenv("BRAWL_STARS_API_KEY")
