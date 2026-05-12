@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrawlMap — News</title>
+  <title>BrawlMap News</title>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="designed.css">
   <style>
@@ -583,29 +583,26 @@ async function safeFetchJson(res) {
 const CMS_API = 'https://test-production-182c.up.railway.app';
 
 async function apiGet(url) {
-  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
-  const headers = {};
-  if (adminToken) headers['X-Admin-Token'] = adminToken;
-  const res = await fetch(fullUrl, { headers });
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = (url.startsWith('http') ? url : CMS_API + url) + (adminToken ? `${sep}token=${adminToken}` : '');
+  const res = await fetch(fullUrl);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return safeFetchJson(res);
 }
 
 async function apiPost(url, data) {
-  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
-  const headers = { 'Content-Type': 'application/json' };
-  if (adminToken) headers['X-Admin-Token'] = adminToken;
-  const res = await fetch(fullUrl, { method: 'POST', headers, body: JSON.stringify(data) });
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = (url.startsWith('http') ? url : CMS_API + url) + (adminToken ? `${sep}token=${adminToken}` : '');
+  const res = await fetch(fullUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   const j = await safeFetchJson(res);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${j?.error || j?.__rawText || 'Request failed'}`);
   return j;
 }
 
 async function apiDelete(url) {
-  const fullUrl = url.startsWith('http') ? url : CMS_API + url;
-  const headers = {};
-  if (adminToken) headers['X-Admin-Token'] = adminToken;
-  const res = await fetch(fullUrl, { method: 'DELETE', headers });
+  const sep = url.includes('?') ? '&' : '?';
+  const fullUrl = (url.startsWith('http') ? url : CMS_API + url) + (adminToken ? `${sep}token=${adminToken}` : '');
+  const res = await fetch(fullUrl, { method: 'DELETE' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res;
 }
@@ -913,10 +910,11 @@ function openAdminGate() {
 async function tryLogin() {
   const pw = document.getElementById('auth-pw').value;
   try {
+    const formData = new URLSearchParams();
+    formData.append('password', pw);
     const res = await fetch(CMS_API + '/cms/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw })
+      body: formData
     });
     const data = await safeFetchJson(res) || {};
     if (!res.ok) throw new Error(data.error || data.__rawText || `Login failed (HTTP ${res.status})`);
@@ -1004,9 +1002,8 @@ async function uploadImage() {
   formData.append('image', file);
 
   try {
-    const res = await fetch(CMS_API + '/cms/upload', {
+    const res = await fetch(CMS_API + '/cms/upload?token=' + adminToken, {
       method: 'POST',
-      headers: { 'X-Admin-Token': adminToken },
       body: formData
     });
     const data = await safeFetchJson(res) || {};
