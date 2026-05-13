@@ -237,6 +237,7 @@ def cms_update_post(post_id):
     if data.get("author"):   post["author"]   = data["author"].strip()
     if "image" in data:      post["image"]    = data["image"].strip()
     if "editedAt" in data:   post["editedAt"] = data["editedAt"]
+    if "createdAt" in data:  post["createdAt"] = int(data["createdAt"])
 
     save_posts(posts)
     return jsonify(post)
