@@ -1,4 +1,4 @@
--e flask
+flask
 python-dotenv
 requests
 rich
