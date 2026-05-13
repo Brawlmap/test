@@ -321,57 +321,63 @@ async function safeFetchJson(res) {
 
 const CMS_API = 'https://brawlmap-bp.onrender.com';
 
-function withToken(url) {
-  const tok = adminToken || localStorage.getItem('brawlmap_admin_token') || '';
-  if (!tok) return url.startsWith('http') ? url : CMS_API + url;
-  const base = url.startsWith('http') ? url : CMS_API + url;
-  return base + (base.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(tok);
+function getToken() {
+  return adminToken || localStorage.getItem('brawlmap_admin_token') || '';
+}
+
+function apiUrl(url) {
+  return url.startsWith('http') ? url : CMS_API + url;
+}
+
+function authHeaders(extra = {}) {
+  const tok = getToken();
+  const headers = { ...extra };
+  if (tok) headers['X-Admin-Token'] = tok;
+  return headers;
+}
+
+function handleAuthError() {
+  adminToken = null;
+  localStorage.removeItem('brawlmap_admin_token');
+  throw new Error('Session expired — please log in again.');
 }
 
 async function apiGet(url) {
-  const res = await fetch(withToken(url));
+  const res = await fetch(apiUrl(url), { headers: authHeaders() });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return safeFetchJson(res);
 }
 
 async function apiPost(url, data) {
-  const res = await fetch(withToken(url), {
+  const res = await fetch(apiUrl(url), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(data)
   });
   const j = await safeFetchJson(res);
-  if (res.status === 401) {
-    // Token expired (server restarted) — clear it and force re-login
-    adminToken = null;
-    localStorage.removeItem('brawlmap_admin_token');
-    throw new Error('Session expired — please log in again.');
-  }
+  if (res.status === 401) handleAuthError();
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${j?.error || j?.__rawText || 'Request failed'}`);
   return j;
 }
 
 async function apiDelete(url) {
-  const res = await fetch(withToken(url), { method: 'DELETE' });
-  if (res.status === 401) {
-    adminToken = null;
-    localStorage.removeItem('brawlmap_admin_token');
-    throw new Error('Session expired — please log in again.');
-  }
+  const res = await fetch(apiUrl(url), {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  if (res.status === 401) handleAuthError();
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res;
 }
 
 async function apiPut(url, data) {
-  // Server requires POST + ?_method=PUT to update (see server.py line 208-212)
-  const base = withToken(url);
-  const fullUrl = base + (base.includes('?') ? '&' : '?') + '_method=PUT';
-  const res = await fetch(fullUrl, {
+  const res = await fetch(apiUrl(url) + '?_method=PUT', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(data)
   });
   const j = await safeFetchJson(res);
+  if (res.status === 401) handleAuthError();
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${j?.error || j?.__rawText || 'Request failed'}`);
   return j;
 }
@@ -901,8 +907,7 @@ async function insertContentImage(id='new-body') {
     const file = input.files[0]; if (!file) return;
     const fd = new FormData(); fd.append('image', file);
     try {
-      const tok = adminToken || localStorage.getItem('brawlmap_admin_token') || '';
-      const res = await fetch(withToken('/cms/upload'), { method: 'POST', body: fd });
+      const res = await fetch(apiUrl('/cms/upload'), { method: 'POST', headers: authHeaders(), body: fd });
       const data = await safeFetchJson(res) || {};
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       const url = CMS_API + data.url;
@@ -1006,7 +1011,7 @@ async function saveEdit() {
 async function uploadBanner(file, imgInputId, previewId) {
   const fd = new FormData(); fd.append('image', file);
   try {
-    const res = await fetch(withToken('/cms/upload'), { method: 'POST', body: fd });
+    const res = await fetch(apiUrl('/cms/upload'), { method: 'POST', headers: authHeaders(), body: fd });
     const data = await safeFetchJson(res) || {};
     if (!res.ok) throw new Error(data.error || 'Upload failed');
     const fullUrl = data.url.startsWith('http') ? data.url : CMS_API + data.url;
