@@ -33,8 +33,10 @@ ADMIN_PASSWORD = os.getenv("CMS_PASSWORD")
 if not ADMIN_PASSWORD:
     raise RuntimeError("CMS_PASSWORD environment variable is not set. Server will not start without it.")
 
-NEWS_FILE       = os.path.join(os.path.dirname(__file__), "news_posts.json")
-COUNTDOWN_FILE  = os.path.join(os.path.dirname(__file__), "countdowns.json")
+# Use /data volume if available (Railway persistent volume), else local
+_DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(__file__)
+NEWS_FILE       = os.path.join(_DATA_DIR, "news_posts.json")
+COUNTDOWN_FILE  = os.path.join(_DATA_DIR, "countdowns.json")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
