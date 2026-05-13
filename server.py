@@ -41,8 +41,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_EXTS    = {"png", "jpg", "jpeg", "webp", "gif", "avif"}
 MAX_IMAGE_BYTES = 5 * 1024 * 1024   # 5 MB
 
-# ── Session store  {token: expires_unix} ─────────────────────────────────────
-_sessions: dict[str, float] = {}
+# ── Stateless HMAC tokens (survive restarts) ─────────────────────────────────
 SESSION_TTL = 60 * 60 * 6   # 6 hours
 
 # ── Login rate limiting: max 10 attempts per IP per 15 min ───────────────────
@@ -102,20 +101,24 @@ def upstream_jsonify(response):
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
 def issue_token() -> str:
-    token = secrets.token_hex(32)
-    _sessions[token] = time.time() + SESSION_TTL
-    return token
+    """Create a stateless signed token: hex_expiry.hmac_signature"""
+    exp = int(time.time()) + SESSION_TTL
+    exp_hex = format(exp, 'x')
+    sig = hmac.new(ADMIN_PASSWORD.encode(), exp_hex.encode(), hashlib.sha256).hexdigest()
+    return f"{exp_hex}.{sig}"
 
 def is_valid_token(token: str | None) -> bool:
-    if not token:
+    if not token or '.' not in token:
         return False
-    exp = _sessions.get(token)
-    if exp is None:
+    try:
+        exp_hex, sig = token.split('.', 1)
+        exp = int(exp_hex, 16)
+        if time.time() > exp:
+            return False
+        expected = hmac.new(ADMIN_PASSWORD.encode(), exp_hex.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, expected)
+    except Exception:
         return False
-    if time.time() > exp:
-        del _sessions[token]
-        return False
-    return True
 
 def require_auth():
     """Returns None if ok, or a JSON error response tuple."""
@@ -158,8 +161,7 @@ def cms_login():
 
 @app.route("/cms/logout", methods=["POST"])
 def cms_logout():
-    token = request.headers.get("X-Admin-Token")
-    _sessions.pop(token, None)
+    # Stateless tokens can't be revoked server-side; client just discards it
     return jsonify({"ok": True})
 
 # ── CMS: Posts ────────────────────────────────────────────────────────────────
@@ -485,14 +487,6 @@ def debug_player_brawlers(tag):
         p11 = [b for b in brawlers if b.get("power") == 11]
         all_keys = sorted({k for b in p11 for k in b.keys()})
         return jsonify({"count_p11": len(p11), "all_keys_found": all_keys, "brawlers": p11})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/myip")
-def myip():
-    try:
-        r = requests.get("https://api.ipify.org?format=json", timeout=5)
-        return jsonify(r.json())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
