@@ -30,9 +30,10 @@ function initNav() {
     const page = tab.dataset.page;
     const isHome = isIndex && page === 'home' && hash !== '#countdown-section';
     const isLeaderboard = page === 'leaderboard' && currentPath === 'leaderboard.html';
-    const isCountdown = page === 'countdown' && isIndex && hash === '#countdown-section';
+    const isCountdown = (page === 'countdown' && isIndex && hash === '#countdown-section') || (page === 'countdown' && currentPath === 'countdown.html');
+    const isNews = page === 'news' && currentPath === 'news.html';
 
-    if (isHome || isLeaderboard || isCountdown) {
+    if (isHome || isLeaderboard || isCountdown || isNews) {
       tab.classList.add('active');
     }
 
@@ -61,4 +62,13 @@ function initNav() {
       if (!moreWrap.contains(e.target)) moreWrap.classList.remove('open');
     });
   }
+
+  // Update news badge
+  fetch('https://test-production-182c.up.railway.app/cms/posts')
+    .then(response => response.json())
+    .then(posts => {
+      const badge = document.getElementById('newsBadge');
+      if (badge) badge.textContent = posts.length;
+    })
+    .catch(err => console.error('Failed to load news count:', err));
 }

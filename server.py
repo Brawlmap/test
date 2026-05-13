@@ -187,6 +187,9 @@ def cms_create_post():
     if not title or not excerpt or not body:
         return jsonify({"error": "title, excerpt and body are required"}), 400
 
+    custom_date = data.get("createdAt")
+    created_at  = int(custom_date) if custom_date else int(time.time() * 1000)
+
     post = {
         "id":        uuid.uuid4().hex,
         "title":     title,
@@ -195,15 +198,51 @@ def cms_create_post():
         "category":  category,
         "author":    author,
         "image":     image,
-        "createdAt": int(time.time() * 1000),
+        "createdAt": created_at,
     }
     posts = load_posts()
     posts.insert(0, post)
     save_posts(posts)
     return jsonify(post), 201
 
-@app.route("/cms/posts/<post_id>", methods=["DELETE"])
+@app.route("/cms/posts/<post_id>", methods=["PUT", "POST"])
+def cms_update_post(post_id):
+    _method = request.args.get("_method") or request.form.get("_method")
+    if request.method == "POST" and _method != "PUT":
+        return jsonify({"error": "Method not allowed"}), 405
+    err = require_auth()
+    if err: return err
+
+    # Support both JSON body and form-encoded _data field
+    if request.content_type and 'application/json' in request.content_type:
+        data = request.get_json(silent=True) or {}
+    else:
+        raw = request.form.get('_data', '{}')
+        try:
+            import json as _json
+            data = _json.loads(raw)
+        except Exception:
+            data = {}
+    posts = load_posts()
+    post = next((p for p in posts if p["id"] == post_id), None)
+    if not post:
+        return jsonify({"error": "Post not found"}), 404
+
+    if data.get("title"):    post["title"]    = data["title"].strip()
+    if data.get("excerpt"):  post["excerpt"]  = data["excerpt"].strip()
+    if data.get("body"):     post["body"]     = data["body"].strip()
+    if data.get("category"): post["category"] = data["category"].strip()
+    if data.get("author"):   post["author"]   = data["author"].strip()
+    if "image" in data:      post["image"]    = data["image"].strip()
+    if "editedAt" in data:   post["editedAt"] = data["editedAt"]
+
+    save_posts(posts)
+    return jsonify(post)
+
+@app.route("/cms/posts/<post_id>", methods=["DELETE", "POST"])
 def cms_delete_post(post_id):
+    if request.method == "POST" and request.args.get("_method") != "DELETE":
+        return jsonify({"error": "Method not allowed"}), 405
     err = require_auth()
     if err: return err
 
@@ -269,6 +308,7 @@ def get_player(tag):
         r = requests.get(f"{BASE_URL}/players/{tag}", headers=bs_headers())
         return upstream_jsonify(r)
     except Exception as e:
+        print(f"ERROR in get_player: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
 
 # ── Brawlers ──────────────────────────────────────────────────────────────────
@@ -290,6 +330,7 @@ def get_player_brawlers(tag):
     try:
         r = requests.get(f"{BASE_URL}/players/{tag}", headers=bs_headers())
         if not r.ok:
+            print(f"ERROR in get_player_brawlers: API returned {r.status_code}: {r.text}", flush=True)
             return upstream_jsonify(r)
 
         player = parse_upstream_json(r) or {}
@@ -444,6 +485,14 @@ def debug_player_brawlers(tag):
         p11 = [b for b in brawlers if b.get("power") == 11]
         all_keys = sorted({k for b in p11 for k in b.keys()})
         return jsonify({"count_p11": len(p11), "all_keys_found": all_keys, "brawlers": p11})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/myip")
+def myip():
+    try:
+        r = requests.get("https://api.ipify.org?format=json", timeout=5)
+        return jsonify(r.json())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
