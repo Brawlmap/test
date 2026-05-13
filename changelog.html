@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changelog - BrawlMap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="designed.css">
+</head>
+<body>
+<div id="nav-root"></div>
+<script src="nav-loader.js"></script>
+
+<div class="cl-wrap">
+  <div class="cl-header">
+    <h1>📋 Changelog</h1>
+    <p>All updates and improvements to BrawlMap, newest first.</p>
+  </div>
+  <div class="cl-timeline" id="cl-timeline"></div>
+</div>
+
+<script>
+const CMS_API = 'https://brawlmap-bp.onrender.com';
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMarkdown(text) {
+  return String(text ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+async function loadChangelog() {
+  const timeline = document.getElementById('cl-timeline');
+  timeline.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">⏳</div><p>Loading…</p></div>';
+
+  let list = [];
+  try {
+    const res = await fetch(CMS_API + '/cms/changelog');
+    list = await res.json();
+  } catch(e) {
+    timeline.innerHTML = '<div class="cl-empty"><div class="cl-empty-icon">⚠️</div><h3>Failed to load</h3></div>';
+    return;
+  }
+
+  if (!list.length) {
+    timeline.innerHTML = `
+      <div class="cl-empty">
+        <div class="cl-empty-icon">📋</div>
+        <h3>No entries yet</h3>
+        <p>Check back soon!</p>
+      </div>`;
+    return;
+  }
+
+  timeline.innerHTML = list.map(entry => {
+    const d = new Date(entry.createdAt);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const imgSrc = entry.image
+      ? (entry.image.startsWith('http') ? entry.image : CMS_API + entry.image)
+      : null;
+
+    return `
+      <div class="cl-entry">
+        <div class="cl-left">
+          <div class="cl-date">${dateStr}</div>
+          ${entry.version ? `<span class="cl-version">v${esc(entry.version)}</span>` : ''}
+        </div>
+        <div class="cl-right">
+          <div class="cl-title">${esc(entry.title)}</div>
+          ${imgSrc ? `<img class="cl-image" src="${esc(imgSrc)}" alt="" onerror="this.style.display='none'">` : ''}
+          <p class="cl-desc">${renderMarkdown(entry.desc)}</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+loadChangelog();
+</script>
+</body>
+</html>

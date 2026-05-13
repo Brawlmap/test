@@ -22,48 +22,6 @@
 /* ── Edit modal ── */
 #modal-edit .modal { max-width: 600px; }
 </style>
-<style>
-/* ── Post page ── */
-.post-page-wrap { max-width:860px; margin:0 auto; padding:1.5rem 1rem 4rem; }
-.post-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.75rem; }
-.post-back { background:none; border:none; color:var(--text3); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; padding:0; }
-.post-back:hover { color:var(--text); }
-.post-copy-url { display:flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--border); color:var(--text3); border-radius:7px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-.post-copy-url:hover { border-color:var(--purple); color:var(--purple); }
-
-/* hero */
-.post-hero { display:grid; grid-template-columns:1fr 300px; gap:2rem; align-items:start; }
-.post-hero-left { min-width:0; display:flex; flex-direction:column; }
-.post-hero-banner { width:300px; height:190px; object-fit:cover; border-radius:14px; flex-shrink:0; }
-@media(max-width:680px){
-  .post-hero { grid-template-columns:1fr; }
-  .post-hero-banner { width:100%; height:200px; order:-1; }
-}
-.post-title { font-family:'Lilita One',cursive; font-size:clamp(1.4rem,4vw,2.1rem); line-height:1.15; color:var(--text); margin:0.5rem 0 0.4rem; }
-.post-subtitle { font-size:13px; color:var(--text3); margin:0 0 0.75rem; font-style:italic; }
-.post-prevnext-inline { display:flex; gap:10px; margin:0 0 1rem; flex-wrap:wrap; }
-.post-prevnext-inline a { font-size:13px; color:var(--text2); text-decoration:none; font-weight:700; display:flex; align-items:center; gap:3px; border:1px solid var(--border); border-radius:6px; padding:3px 10px; transition:border-color .15s; }
-.post-prevnext-inline a:hover { border-color:var(--purple); color:var(--purple); }
-.post-author-row { display:flex; align-items:center; gap:10px; margin-top:0.75rem; padding-top:1rem; border-top:1px solid var(--border); }
-.post-author-avatar { width:34px; height:34px; border-radius:50%; background:var(--purple); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; color:#fff; flex-shrink:0; }
-.post-author-name { font-size:13px; font-weight:700; color:var(--text); }
-.post-author-date { font-size:12px; color:var(--text3); }
-.post-divider { border:none; border-top:1px solid var(--border); margin:1.5rem 0; }
-.post-body { font-size:15px; line-height:1.8; color:var(--text2); }
-.post-body strong { color:#fff; font-weight:800; }
-.post-body h1 { font-size:1.4em; font-weight:800; margin:1.4rem 0 0.4rem; color:#fff; font-family:'Lilita One',cursive; }
-.post-body h2 { font-size:1.15em; font-weight:800; margin:1.1rem 0 0.3rem; color:#fff; }
-.post-body img { max-width:100%; border-radius:10px; margin:0.75rem 0; display:block; }
-
-/* bottom nav */
-.post-nav { display:flex; gap:12px; margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
-.post-nav-btn { flex:1; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem; cursor:pointer; text-align:left; font-family:inherit; color:var(--text); transition:border-color .15s; }
-.post-nav-btn:hover { border-color:var(--purple); }
-.post-nav-btn.next { text-align:right; }
-.post-nav-label { font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
-.post-nav-title { font-size:13px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-</style>
-
 </head>
 <body>
 <div id="nav-root"></div>
@@ -114,7 +72,6 @@
       </button>
     </div>
     <div id="post-content"></div>
-    <div class="post-nav" id="post-nav"></div>
   </div>
 </div>
 
@@ -149,6 +106,7 @@
     <div class="admin-tabs">
       <button class="admin-tab-btn active" onclick="switchAdminTab('posts', this)">📰 Posts</button>
       <button class="admin-tab-btn" onclick="switchAdminTab('countdown', this)">⏳ Countdowns</button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('changelog', this)">📋 Changelog</button>
     </div>
 
     <!-- Posts tab -->
@@ -238,6 +196,40 @@
 
       <div style="font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:0.75rem">Active Countdowns</div>
       <div id="admin-cd-list"></div>
+    </div>
+
+    <!-- Changelog tab -->
+    <div class="admin-tab-panel" id="admin-tab-changelog">
+      <details open style="margin-bottom:1.5rem">
+        <summary style="cursor:pointer;font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:1rem">＋ New Entry</summary>
+        <div style="padding-top:0.75rem">
+          <div class="form-group">
+            <label>Version <span style="color:var(--text3);font-weight:400">(e.g. 2.5.0)</span></label>
+            <input type="text" id="cl-version" placeholder="1.0.0" />
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="cl-title" placeholder="What changed?" />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="cl-desc" placeholder="Describe the changes…" style="min-height:100px"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Screenshot / Image</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button type="button" class="btn-cancel" style="font-size:12px" onclick="triggerClUpload()">⬆ Upload image</button>
+              <input type="file" id="cl-image-upload" accept="image/*" style="display:none" />
+              <input type="text" id="cl-img" placeholder="or paste URL…" style="flex:1;min-width:160px" />
+            </div>
+            <div id="cl-img-preview" style="margin-top:6px"></div>
+          </div>
+          <button class="btn-publish" onclick="createChangelog()" style="width:100%;margin-top:0.25rem">Add Entry</button>
+          <div class="auth-error" id="cl-error" style="margin-top:6px"></div>
+        </div>
+      </details>
+      <div style="font-weight:800;color:var(--text2);font-size:13px;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:0.75rem">Entries</div>
+      <div id="admin-cl-list"></div>
     </div>
   </div>
 </div>
@@ -495,56 +487,49 @@ async function openPost(id) {
   const prevPost = allPosts[postIdx + 1] || null;
   const nextPost = allPosts[postIdx - 1] || null;
 
+  const prevBtn = prevPost
+    ? `<button class="post-nav-btn" onclick="openPost('${prevPost.id}')">‹ Previous</button>`
+    : `<span class="post-nav-btn disabled">‹ Previous</span>`;
+  const nextBtn = nextPost
+    ? `<button class="post-nav-btn" onclick="openPost('${nextPost.id}')">Next ›</button>`
+    : `<span class="post-nav-btn disabled">Next ›</span>`;
+
   const postImgSrc = post.image
     ? (post.image.startsWith('http') ? post.image : CMS_API + post.image)
     : null;
 
-  const avatarLetter = (post.author || 'A')[0].toUpperCase();
-
-  const prevNextInline = (prevPost || nextPost) ? `
-    <div class="post-prevnext-inline">
-      ${prevPost ? `<a href="#post-${prevPost.id}" onclick="openPost('${prevPost.id}');return false;">‹ Previous</a>` : ''}
-      ${nextPost ? `<a href="#post-${nextPost.id}" onclick="openPost('${nextPost.id}');return false;">Next ›</a>` : ''}
-    </div>` : '';
-
-  const heroRight = postImgSrc
-    ? `<img class="post-hero-banner" src="${esc(postImgSrc)}" alt="" onerror="this.style.display='none'">`
-    : '';
+  const thumbHtml = postImgSrc
+    ? `<img class="post-header-thumb" src="${esc(postImgSrc)}" alt="" onerror="this.style.display='none'">`
+    : `<div class="post-header-thumb-placeholder">${meta.emoji}</div>`;
 
   document.getElementById('post-content').innerHTML = `
-    <div class="post-hero">
-      <div class="post-hero-left">
-        <span class="news-card-category ${meta.cls}" style="margin-bottom:0.6rem;display:inline-block">${meta.label}</span>
+    <div class="post-header-grid">
+      <div class="post-header-left">
+        <div style="margin-bottom:0.6rem">
+          <span class="news-card-category ${meta.cls}">${meta.label}</span>
+        </div>
         <div class="post-title">${esc(post.title)}</div>
         ${post.excerpt ? `<div class="post-subtitle">${esc(post.excerpt)}</div>` : ''}
-        ${prevNextInline}
-        <div class="post-author-row">
-          <div class="post-author-avatar">${avatarLetter}</div>
-          <div>
-            <div class="post-author-name">By ${esc(post.author)}</div>
-            <div class="post-author-date">${date}</div>
+        <div class="post-nav">
+          ${prevBtn}
+          <span class="post-nav-sep">|</span>
+          ${nextBtn}
+        </div>
+        <div class="post-meta">
+          <div class="post-meta-avatar">
+            <span style="font-size:12px">${esc(post.author).charAt(0).toUpperCase()}</span>
           </div>
+          <span>By <strong style="color:var(--text)">${esc(post.author)}</strong></span>
+          <span style="color:var(--border2)">·</span>
+          <span>${date}</span>
         </div>
       </div>
-      ${heroRight}
+      ${thumbHtml}
     </div>
-    <hr class="post-divider">
     <div class="post-body">${renderMarkdown(post.body)}</div>
   `;
 
-  document.getElementById('post-nav').innerHTML = `
-    ${prevPost ? `<button class="post-nav-btn prev" onclick="openPost('${prevPost.id}')">
-      <div class="post-nav-label">‹ Previous</div>
-      <div class="post-nav-title">${esc(prevPost.title)}</div>
-    </button>` : '<div></div>'}
-    ${nextPost ? `<button class="post-nav-btn next" onclick="openPost('${nextPost.id}')">
-      <div class="post-nav-label">Next ›</div>
-      <div class="post-nav-title">${esc(nextPost.title)}</div>
-    </button>` : ''}
-  `;
-
   // Update URL hash so it's shareable
-    // Update URL hash so it's shareable
   history.pushState({ postId: id }, '', `#post-${id}`);
   document.title = `${post.title} — BrawlMap`;
   showView('post');
@@ -729,6 +714,79 @@ async function renderAdminCdList() {
   }).join('');
 }
 
+/* ══════════════════════════════
+   CHANGELOG (localStorage)
+══════════════════════════════ */
+const CL_KEY = 'brawlmap_changelog';
+
+function loadChangelog() {
+  try { return JSON.parse(localStorage.getItem(CL_KEY) || '[]'); }
+  catch(_) { return []; }
+}
+
+function saveChangelog(list) {
+  localStorage.setItem(CL_KEY, JSON.stringify(list));
+}
+
+async function createChangelog() {
+  const version = document.getElementById('cl-version').value.trim();
+  const title = document.getElementById('cl-title').value.trim();
+  const desc = document.getElementById('cl-desc').value.trim();
+  const img = document.getElementById('cl-img').value.trim();
+  const errEl = document.getElementById('cl-error');
+
+  if (!version || !title || !desc) {
+    errEl.textContent = 'Version, title, and description are required.';
+    return;
+  }
+  errEl.textContent = '';
+
+  try {
+    await apiPost('/cms/changelog', { version, title, desc, image: img });
+    document.getElementById('cl-version').value = '';
+    document.getElementById('cl-title').value = '';
+    document.getElementById('cl-desc').value = '';
+    document.getElementById('cl-img').value = '';
+    renderAdminClList();
+  } catch(err) {
+    errEl.textContent = 'Failed to add: ' + err.message;
+  }
+}
+
+async function deleteChangelog(id) {
+  if (!confirm('Remove this entry?')) return;
+  try {
+    await apiDelete(`/cms/changelog/${id}`);
+    renderAdminClList();
+  } catch(err) {
+    alert('Failed to delete: ' + err.message);
+  }
+}
+
+async function renderAdminClList() {
+  const el = document.getElementById('admin-cl-list');
+  if (!el) return;
+  let list = [];
+  try {
+    const res = await fetch(CMS_API + '/cms/changelog');
+    list = await res.json();
+  } catch(_) {}
+  if (list.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">No entries yet.</div>';
+    return;
+  }
+  el.innerHTML = list.map(cl => {
+    const dateStr = new Date(cl.createdAt).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+    return `
+      <div class="admin-post-item">
+        <div class="admin-post-item-title">${esc(cl.version)}: ${esc(cl.title)}<span style="color:var(--text3);font-weight:600;font-size:11px;margin-left:8px">${dateStr}</span></div>
+        <button class="btn-delete" onclick="deleteChangelog('${cl.id}')">Delete</button>
+      </div>`;
+  }).join('');
+}
+
 /* ── Admin tabs ── */
 function switchAdminTab(tab, btn) {
   document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -736,6 +794,7 @@ function switchAdminTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('admin-tab-' + tab).classList.add('active');
   if (tab === 'countdown') renderAdminCdList();
+  if (tab === 'changelog') renderAdminClList();
 }
 
 /* ── Auth ── */
@@ -778,6 +837,7 @@ function logoutAdmin() {
 async function openAdminPanel() {
   await renderAdminList();
   renderAdminCdList();
+  renderAdminClList();
   renderCountdowns(); // show delete buttons
   openModal('modal-admin');
 }
@@ -965,6 +1025,12 @@ function triggerBannerUpload() {
 function triggerEditBannerUpload() {
   const input = document.getElementById('edit-image-upload');
   input.onchange = () => { if(input.files[0]) uploadBanner(input.files[0], 'edit-img', 'edit-img-preview'); };
+  input.click();
+}
+
+function triggerClUpload() {
+  const input = document.getElementById('cl-image-upload');
+  input.onchange = () => { if(input.files[0]) uploadBanner(input.files[0], 'cl-img', 'cl-img-preview'); };
   input.click();
 }
 

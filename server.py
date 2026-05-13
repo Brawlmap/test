@@ -37,6 +37,7 @@ if not ADMIN_PASSWORD:
 _DATA_DIR = "/data" if os.path.isdir("/data") else os.path.dirname(__file__)
 NEWS_FILE       = os.path.join(_DATA_DIR, "news_posts.json")
 COUNTDOWN_FILE  = os.path.join(_DATA_DIR, "countdowns.json")
+CHANGELOG_FILE  = os.path.join(_DATA_DIR, "changelog.json")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -467,6 +468,93 @@ def cms_delete_countdown(cd_id):
     if len(new_list) == len(countdowns):
         return jsonify({"error": "Countdown not found"}), 404
     save_countdowns(new_list)
+    return jsonify({"ok": True})
+
+# ── Changelog helpers ─────────────────────────────────────────────────────────
+
+def load_changelog() -> list:
+    if not os.path.exists(CHANGELOG_FILE):
+        return []
+    try:
+        with open(CHANGELOG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_changelog(entries: list):
+    with open(CHANGELOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
+
+# ── Changelog routes ──────────────────────────────────────────────────────────
+
+@app.route("/cms/changelog", methods=["GET"])
+def cms_list_changelog():
+    """Public — returns all changelog entries sorted newest-first."""
+    entries = load_changelog()
+    entries.sort(key=lambda e: e.get("createdAt", 0), reverse=True)
+    return jsonify(entries)
+
+@app.route("/cms/changelog", methods=["POST"])
+def cms_create_changelog():
+    err = require_auth()
+    if err: return err
+
+    data    = request.get_json(silent=True) or {}
+    title   = (data.get("title")   or "").strip()
+    desc    = (data.get("desc")    or "").strip()
+    version = (data.get("version") or "").strip()
+    image   = (data.get("image")   or "").strip()
+
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+
+    custom_date = data.get("createdAt")
+    created_at  = int(custom_date) if custom_date else int(time.time() * 1000)
+
+    entry = {
+        "id":        uuid.uuid4().hex,
+        "title":     title,
+        "desc":      desc,
+        "version":   version,
+        "image":     image,
+        "createdAt": created_at,
+    }
+    entries = load_changelog()
+    entries.insert(0, entry)
+    save_changelog(entries)
+    return jsonify(entry), 201
+
+@app.route("/cms/changelog/<entry_id>", methods=["PUT", "PATCH"])
+def cms_update_changelog(entry_id):
+    err = require_auth()
+    if err: return err
+
+    data    = request.get_json(silent=True) or {}
+    entries = load_changelog()
+    entry   = next((e for e in entries if e["id"] == entry_id), None)
+    if not entry:
+        return jsonify({"error": "Changelog entry not found"}), 404
+
+    if data.get("title"):   entry["title"]   = data["title"].strip()
+    if "desc"    in data:   entry["desc"]    = data["desc"].strip()
+    if "version" in data:   entry["version"] = data["version"].strip()
+    if "image"   in data:   entry["image"]   = data["image"].strip()
+    if "createdAt" in data: entry["createdAt"] = int(data["createdAt"])
+    entry["editedAt"] = int(time.time() * 1000)
+
+    save_changelog(entries)
+    return jsonify(entry)
+
+@app.route("/cms/changelog/<entry_id>", methods=["DELETE"])
+def cms_delete_changelog(entry_id):
+    err = require_auth()
+    if err: return err
+
+    entries  = load_changelog()
+    new_list = [e for e in entries if e["id"] != entry_id]
+    if len(new_list) == len(entries):
+        return jsonify({"error": "Changelog entry not found"}), 404
+    save_changelog(new_list)
     return jsonify({"ok": True})
 
 # ── Health ────────────────────────────────────────────────────────────────────
