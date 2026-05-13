@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrawlMap News</title>
+  <title>Brawlmap News</title>
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="designed.css">
 
@@ -22,6 +22,48 @@
 /* ── Edit modal ── */
 #modal-edit .modal { max-width: 600px; }
 </style>
+<style>
+/* ── Post page ── */
+.post-page-wrap { max-width:860px; margin:0 auto; padding:1.5rem 1rem 4rem; }
+.post-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.75rem; }
+.post-back { background:none; border:none; color:var(--text3); font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; padding:0; }
+.post-back:hover { color:var(--text); }
+.post-copy-url { display:flex; align-items:center; gap:6px; background:transparent; border:1px solid var(--border); color:var(--text3); border-radius:7px; padding:5px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+.post-copy-url:hover { border-color:var(--purple); color:var(--purple); }
+
+/* hero */
+.post-hero { display:grid; grid-template-columns:1fr 300px; gap:2rem; align-items:start; }
+.post-hero-left { min-width:0; display:flex; flex-direction:column; }
+.post-hero-banner { width:300px; height:190px; object-fit:cover; border-radius:14px; flex-shrink:0; }
+@media(max-width:680px){
+  .post-hero { grid-template-columns:1fr; }
+  .post-hero-banner { width:100%; height:200px; order:-1; }
+}
+.post-title { font-family:'Lilita One',cursive; font-size:clamp(1.4rem,4vw,2.1rem); line-height:1.15; color:var(--text); margin:0.5rem 0 0.4rem; }
+.post-subtitle { font-size:13px; color:var(--text3); margin:0 0 0.75rem; font-style:italic; }
+.post-prevnext-inline { display:flex; gap:10px; margin:0 0 1rem; flex-wrap:wrap; }
+.post-prevnext-inline a { font-size:13px; color:var(--text2); text-decoration:none; font-weight:700; display:flex; align-items:center; gap:3px; border:1px solid var(--border); border-radius:6px; padding:3px 10px; transition:border-color .15s; }
+.post-prevnext-inline a:hover { border-color:var(--purple); color:var(--purple); }
+.post-author-row { display:flex; align-items:center; gap:10px; margin-top:0.75rem; padding-top:1rem; border-top:1px solid var(--border); }
+.post-author-avatar { width:34px; height:34px; border-radius:50%; background:var(--purple); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; color:#fff; flex-shrink:0; }
+.post-author-name { font-size:13px; font-weight:700; color:var(--text); }
+.post-author-date { font-size:12px; color:var(--text3); }
+.post-divider { border:none; border-top:1px solid var(--border); margin:1.5rem 0; }
+.post-body { font-size:15px; line-height:1.8; color:var(--text2); }
+.post-body strong { color:#fff; font-weight:800; }
+.post-body h1 { font-size:1.4em; font-weight:800; margin:1.4rem 0 0.4rem; color:#fff; font-family:'Lilita One',cursive; }
+.post-body h2 { font-size:1.15em; font-weight:800; margin:1.1rem 0 0.3rem; color:#fff; }
+.post-body img { max-width:100%; border-radius:10px; margin:0.75rem 0; display:block; }
+
+/* bottom nav */
+.post-nav { display:flex; gap:12px; margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+.post-nav-btn { flex:1; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem; cursor:pointer; text-align:left; font-family:inherit; color:var(--text); transition:border-color .15s; }
+.post-nav-btn:hover { border-color:var(--purple); }
+.post-nav-btn.next { text-align:right; }
+.post-nav-label { font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.post-nav-title { font-size:13px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+</style>
+
 </head>
 <body>
 <div id="nav-root"></div>
@@ -72,6 +114,7 @@
       </button>
     </div>
     <div id="post-content"></div>
+    <div class="post-nav" id="post-nav"></div>
   </div>
 </div>
 
@@ -284,7 +327,7 @@ async function safeFetchJson(res) {
   catch (_) { return { __rawText: text }; }
 }
 
-const CMS_API = 'https://test-production-182c.up.railway.app';
+const CMS_API = 'https://brawlmap-bp.onrender.com';
 
 function withToken(url) {
   const tok = adminToken || localStorage.getItem('brawlmap_admin_token') || '';
@@ -452,49 +495,56 @@ async function openPost(id) {
   const prevPost = allPosts[postIdx + 1] || null;
   const nextPost = allPosts[postIdx - 1] || null;
 
-  const prevBtn = prevPost
-    ? `<button class="post-nav-btn" onclick="openPost('${prevPost.id}')">‹ Previous</button>`
-    : `<span class="post-nav-btn disabled">‹ Previous</span>`;
-  const nextBtn = nextPost
-    ? `<button class="post-nav-btn" onclick="openPost('${nextPost.id}')">Next ›</button>`
-    : `<span class="post-nav-btn disabled">Next ›</span>`;
-
   const postImgSrc = post.image
     ? (post.image.startsWith('http') ? post.image : CMS_API + post.image)
     : null;
 
-  const thumbHtml = postImgSrc
-    ? `<img class="post-header-thumb" src="${esc(postImgSrc)}" alt="" onerror="this.style.display='none'">`
-    : `<div class="post-header-thumb-placeholder">${meta.emoji}</div>`;
+  const avatarLetter = (post.author || 'A')[0].toUpperCase();
+
+  const prevNextInline = (prevPost || nextPost) ? `
+    <div class="post-prevnext-inline">
+      ${prevPost ? `<a href="#post-${prevPost.id}" onclick="openPost('${prevPost.id}');return false;">‹ Previous</a>` : ''}
+      ${nextPost ? `<a href="#post-${nextPost.id}" onclick="openPost('${nextPost.id}');return false;">Next ›</a>` : ''}
+    </div>` : '';
+
+  const heroRight = postImgSrc
+    ? `<img class="post-hero-banner" src="${esc(postImgSrc)}" alt="" onerror="this.style.display='none'">`
+    : '';
 
   document.getElementById('post-content').innerHTML = `
-    <div class="post-header-grid">
-      <div class="post-header-left">
-        <div style="margin-bottom:0.6rem">
-          <span class="news-card-category ${meta.cls}">${meta.label}</span>
-        </div>
+    <div class="post-hero">
+      <div class="post-hero-left">
+        <span class="news-card-category ${meta.cls}" style="margin-bottom:0.6rem;display:inline-block">${meta.label}</span>
         <div class="post-title">${esc(post.title)}</div>
         ${post.excerpt ? `<div class="post-subtitle">${esc(post.excerpt)}</div>` : ''}
-        <div class="post-nav">
-          ${prevBtn}
-          <span class="post-nav-sep">|</span>
-          ${nextBtn}
-        </div>
-        <div class="post-meta">
-          <div class="post-meta-avatar">
-            <span style="font-size:12px">${esc(post.author).charAt(0).toUpperCase()}</span>
+        ${prevNextInline}
+        <div class="post-author-row">
+          <div class="post-author-avatar">${avatarLetter}</div>
+          <div>
+            <div class="post-author-name">By ${esc(post.author)}</div>
+            <div class="post-author-date">${date}</div>
           </div>
-          <span>By <strong style="color:var(--text)">${esc(post.author)}</strong></span>
-          <span style="color:var(--border2)">·</span>
-          <span>${date}</span>
         </div>
       </div>
-      ${thumbHtml}
+      ${heroRight}
     </div>
+    <hr class="post-divider">
     <div class="post-body">${renderMarkdown(post.body)}</div>
   `;
 
+  document.getElementById('post-nav').innerHTML = `
+    ${prevPost ? `<button class="post-nav-btn prev" onclick="openPost('${prevPost.id}')">
+      <div class="post-nav-label">‹ Previous</div>
+      <div class="post-nav-title">${esc(prevPost.title)}</div>
+    </button>` : '<div></div>'}
+    ${nextPost ? `<button class="post-nav-btn next" onclick="openPost('${nextPost.id}')">
+      <div class="post-nav-label">Next ›</div>
+      <div class="post-nav-title">${esc(nextPost.title)}</div>
+    </button>` : ''}
+  `;
+
   // Update URL hash so it's shareable
+    // Update URL hash so it's shareable
   history.pushState({ postId: id }, '', `#post-${id}`);
   document.title = `${post.title} — BrawlMap`;
   showView('post');
